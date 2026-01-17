@@ -71,33 +71,46 @@ export const useTaskStore = defineStore('task', () => {
 
   const currentFilter = ref<FilterType>('all')
   const currentView = ref<'normal' | 'quadrant'>('normal')
+  const hideCompleted = ref(false)
 
   const filteredTasks = computed(() => {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
 
+    let baseTasks: Task[]
+
     switch (currentFilter.value) {
       case 'today':
-        return tasks.value.filter(task => {
+        baseTasks = tasks.value.filter(task => {
           if (!task.date) return false
           const taskDate = new Date(task.date)
           taskDate.setHours(0, 0, 0, 0)
           return taskDate.getTime() === today.getTime()
         })
+        break
       case 'last7days':
         const sevenDaysAgo = new Date(today)
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-        return tasks.value.filter(task => {
+        baseTasks = tasks.value.filter(task => {
           if (!task.date) return false
           const taskDate = new Date(task.date)
           taskDate.setHours(0, 0, 0, 0)
           return taskDate >= sevenDaysAgo && taskDate <= today
         })
+        break
       case 'inbox':
-        return tasks.value.filter(task => task.checklist === '收集箱')
+        baseTasks = tasks.value.filter(task => task.checklist === '收集箱')
+        break
       default:
-        return tasks.value
+        baseTasks = tasks.value
+        break
     }
+
+    if (hideCompleted.value) {
+      return baseTasks.filter(task => !task.completed)
+    }
+
+    return baseTasks
   })
 
   // 获取任务的四象限类型
@@ -106,7 +119,7 @@ export const useTaskStore = defineStore('task', () => {
     if (task.important && !task.urgent) return 'II'
     if (!task.important && task.urgent) return 'III'
     if (!task.important && !task.urgent) return 'IV'
-    return null
+    return 'IV'
   }
 
   // 按四象限分组任务
@@ -271,6 +284,10 @@ export const useTaskStore = defineStore('task', () => {
     }
   }
 
+  function toggleHideCompleted() {
+    hideCompleted.value = !hideCompleted.value
+  }
+
   function formatTaskDate(task: Task): string {
     if (!task.date) return ''
     const date = new Date(task.date)
@@ -285,6 +302,7 @@ export const useTaskStore = defineStore('task', () => {
     tasks,
     currentFilter,
     currentView,
+    hideCompleted,
     filteredTasks,
     tasksByDate,
     tasksByQuadrant,
@@ -297,6 +315,7 @@ export const useTaskStore = defineStore('task', () => {
     updateTask,
     formatTaskDate,
     getQuadrantType,
-    groupTasksByDateAndStatus
+    groupTasksByDateAndStatus,
+    toggleHideCompleted
   }
 })

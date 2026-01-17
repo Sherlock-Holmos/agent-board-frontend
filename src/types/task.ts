@@ -19,4 +19,4 @@ export interface Checklist {
 
 export type FilterType = 'all' | 'today' | 'last7days' | 'inbox' | 'summary' | 'quadrant'
 
-export type QuadrantType = 'I' | 'II' | 'III' | 'IV' | null
+export type QuadrantType = 'I' | 'II' | 'III' | 'IV'

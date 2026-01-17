@@ -1,33 +1,45 @@
 <template>
-  <div class="sidebar">
+  <div class="sidebar" :class="{ compact }">
     <div class="icon-bar">
-      <el-avatar :size="36" :icon="User" class="avatar-icon" />
-      <el-icon 
-        class="icon" 
-        :size="24"
-        :class="{ active: currentView === 'normal' }"
-        @click="handleIconClick('normal')"
-      >
-        <CircleCheck />
-      </el-icon>
-      <el-icon 
-        class="icon" 
-        :size="24"
-        :class="{ active: currentView === 'quadrant' }"
-        @click="handleIconClick('quadrant')"
-      >
-        <Grid />
-      </el-icon>
-      <el-icon class="icon" :size="24"><Aim /></el-icon>
-      <el-icon class="icon" :size="24"><Clock /></el-icon>
-      <el-icon class="icon" :size="24"><Search /></el-icon>
-      <el-icon class="icon" :size="24"><Refresh /></el-icon>
-      <el-icon class="icon" :size="24"><Bell /></el-icon>
-      <el-icon class="icon" :size="24"><QuestionFilled /></el-icon>
-      <el-icon class="icon" :size="24"><Setting /></el-icon>
+      <div class="icon-group">
+        <el-avatar
+          :size="36"
+          :icon="User"
+          class="avatar-icon"
+          @click="userDialogVisible = true"
+        />
+        <el-icon 
+          class="icon" 
+          :size="24"
+          :class="{ active: currentView === 'normal' }"
+          @click="handleIconClick('normal')"
+        >
+          <CircleCheck />
+        </el-icon>
+        <el-icon 
+          class="icon" 
+          :size="24"
+          :class="{ active: currentView === 'quadrant' }"
+          @click="handleIconClick('quadrant')"
+        >
+          <Grid />
+        </el-icon>
+        <el-icon class="icon" :size="24"><Aim /></el-icon>
+        <el-icon class="icon" :size="24"><Clock /></el-icon>
+        <el-icon class="icon" :size="24"><Search /></el-icon>
+      </div>
+
+      <div class="icon-spacer"></div>
+
+      <div class="icon-group">
+        <el-icon class="icon" :size="24"><Refresh /></el-icon>
+        <el-icon class="icon" :size="24"><Bell /></el-icon>
+        <el-icon class="icon" :size="24"><QuestionFilled /></el-icon>
+        <el-icon class="icon" :size="24"><Setting /></el-icon>
+      </div>
     </div>
     <div class="nav-content">
-      <div class="nav-list">
+      <div v-if="currentView !== 'quadrant'" class="nav-list">
         <div 
           v-for="item in navItems" 
           :key="item.key"
@@ -43,22 +55,7 @@
           <el-icon v-if="currentFilter === item.key" class="check-icon"><Check /></el-icon>
         </div>
       </div>
-      <div v-if="currentView === 'quadrant'" class="quadrant-section">
-        <h3 class="quadrant-title">四象限</h3>
-        <div 
-          v-for="quadrant in quadrants" 
-          :key="quadrant.type"
-          class="quadrant-item"
-          :class="{ active: selectedQuadrant === quadrant.type }"
-          @click="handleQuadrantClick(quadrant.type)"
-        >
-          <el-icon class="quadrant-icon" :style="{ color: quadrant.color }">
-            <component :is="quadrant.icon" />
-          </el-icon>
-          <span class="quadrant-label">{{ quadrant.label }}</span>
-        </div>
-      </div>
-      <div class="info-sections">
+      <div v-if="currentView !== 'quadrant'" class="info-sections">
         <div class="info-section">
           <h4>清单</h4>
           <p>用清单来分类收集、组织和管理你的任务和笔记</p>
@@ -72,7 +69,7 @@
           <p>以标签的维度展示不同清单的任务。在添加任务时输入"#"可快速选择标签</p>
         </div>
       </div>
-      <div class="bottom-actions">
+      <div v-if="currentView !== 'quadrant'" class="bottom-actions">
         <div class="action-item">
           <el-icon><Checked /></el-icon>
           <span>已完成</span>
@@ -83,25 +80,32 @@
         </div>
       </div>
     </div>
+
+    <UserDialog v-model="userDialogVisible" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useTaskStore } from '@/stores/taskStore'
+import UserDialog from './UserDialog.vue'
 import { 
   User, 
   Document, 
   Calendar, 
   Box,
   WarningFilled,
-  InfoFilled,
-  Trophy
+  InfoFilled
 } from '@element-plus/icons-vue'
 import type { FilterType, QuadrantType } from '@/types/task'
 
+const props = defineProps<{
+  compact?: boolean
+}>()
+
 const taskStore = useTaskStore()
-const selectedQuadrant = ref<QuadrantType>(null)
+const selectedQuadrant = ref<QuadrantType | null>(null)
+const userDialogVisible = ref(false)
 
 const currentFilter = computed(() => taskStore.currentFilter)
 const currentView = computed(() => taskStore.currentView)
@@ -181,8 +185,9 @@ function handleNavClick(key: FilterType) {
 
 function handleIconClick(view: 'normal' | 'quadrant') {
   if (view === 'quadrant') {
-    taskStore.setView('quadrant')
+    // 先设置过滤器，再切换视图，避免 setFilter 把视图重置为 normal
     taskStore.setFilter('all') // 切换到四象限视图时，使用 all 过滤器
+    taskStore.setView('quadrant')
   } else {
     taskStore.setView('normal')
     // 如果当前没有选中任何导航项，默认选中"所有"
@@ -208,6 +213,16 @@ function handleQuadrantClick(quadrant: QuadrantType) {
   overflow-y: auto;
 }
 
+.sidebar.compact {
+  width: 56px;
+  background-color: #2c3e50;
+  border-right: none;
+}
+
+.sidebar.compact .nav-content {
+  display: none;
+}
+
 .nav-content {
   background-color: #f8f9fa;
 }
@@ -219,11 +234,23 @@ function handleQuadrantClick(quadrant: QuadrantType) {
   padding: 12px 0;
   width: 56px;
   background-color: #2c3e50;
+}
+
+.icon-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   gap: 12px;
+  width: 100%;
+}
+
+.icon-spacer {
+  flex: 1;
 }
 
 .avatar-icon {
   margin-bottom: 4px;
+  cursor: pointer;
 }
 
 .icon {

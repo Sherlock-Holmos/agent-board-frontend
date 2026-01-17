@@ -5,7 +5,18 @@
       <h2 class="title">{{ currentTitle }}</h2>
       <div class="header-actions">
         <span class="view-info">{{ filteredTasksCount }}L</span>
-        <el-icon class="more-icon"><MoreFilled /></el-icon>
+        <el-dropdown @command="handleHeaderCommand">
+          <span class="more-trigger">
+            <el-icon class="more-icon"><MoreFilled /></el-icon>
+          </span>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item command="toggle-hide-completed">
+                {{ hideCompleted ? '显示已完成' : '隐藏已完成' }}
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
       </div>
     </div>
     <div class="task-input-wrapper">
@@ -23,78 +34,85 @@
     <div class="task-list">
       <!-- 四象限视图 -->
       <template v-if="currentView === 'quadrant'">
-        <div v-for="quadrant in quadrants" :key="quadrant.type" class="quadrant-group">
-          <div class="quadrant-header">
-            <el-icon class="quadrant-header-icon" :style="{ color: quadrant.color }">
-              <component :is="quadrant.icon" />
-            </el-icon>
-            <span class="quadrant-header-title">{{ quadrant.label }}</span>
-            <el-icon 
-              class="collapse-icon"
-              :class="{ collapsed: collapsedQuadrants[quadrant.type] }"
-              @click="toggleQuadrant(quadrant.type)"
-            >
-              <ArrowDown />
-            </el-icon>
-          </div>
-          <div v-if="!collapsedQuadrants[quadrant.type]" class="quadrant-content">
-            <template v-if="hasTasksInQuadrant(quadrant.type)">
-              <div 
-                v-for="(dateGroup, dateKey) in getQuadrantTasksGrouped(quadrant.type)" 
-                :key="dateKey"
-                class="date-group"
+        <div class="quadrant-grid">
+          <div v-for="quadrant in quadrants" :key="quadrant.type" class="quadrant-card">
+            <div class="quadrant-header">
+              <el-icon class="quadrant-header-icon" :style="{ color: quadrant.color }">
+                <component :is="quadrant.icon" />
+              </el-icon>
+              <span class="quadrant-header-title">{{ quadrant.label }}</span>
+              <el-icon 
+                class="collapse-icon"
+                :class="{ collapsed: collapsedQuadrants[quadrant.type] }"
+                @click="toggleQuadrant(quadrant.type)"
               >
-                <!-- 待办任务 -->
-                <div v-if="dateGroup.pending.length > 0" class="status-group">
-                  <div class="status-group-header">
-                    <el-icon 
-                      class="collapse-icon"
-                      :class="{ collapsed: collapsedGroups[`${quadrant.type}-${dateKey}-pending`] }"
-                      @click="toggleGroup(`${quadrant.type}-${dateKey}-pending`)"
-                    >
-                      <ArrowDown />
-                    </el-icon>
-                    <span class="status-group-title">{{ dateKey }} {{ dateGroup.pending.length }}</span>
-                  </div>
-                  <div v-if="!collapsedGroups[`${quadrant.type}-${dateKey}-pending`]" class="status-group-content">
-                    <task-item
-                      v-for="task in dateGroup.pending"
-                      :key="task.id"
-                      :task="task"
-                      @toggle="() => taskStore.toggleTask(task.id)"
-                      @edit="() => handleEditTask(task)"
-                    />
+                <ArrowDown />
+              </el-icon>
+            </div>
+            <div v-if="!collapsedQuadrants[quadrant.type]" class="quadrant-content">
+              <template v-if="hasTasksInQuadrant(quadrant.type)">
+                <div 
+                  v-for="(dateGroup, dateKey) in getQuadrantTasksGrouped(quadrant.type)" 
+                  :key="dateKey"
+                  class="date-group"
+                >
+                  <!-- 待办任务按日期分组 -->
+                  <div v-if="dateGroup.pending.length > 0" class="status-group">
+                    <div class="status-group-header">
+                      <el-icon 
+                        class="collapse-icon"
+                        :class="{ collapsed: collapsedGroups[`${quadrant.type}-${dateKey}-pending`] }"
+                        @click="toggleGroup(`${quadrant.type}-${dateKey}-pending`)"
+                      >
+                        <ArrowDown />
+                      </el-icon>
+                      <span class="status-group-title">{{ dateKey }} {{ dateGroup.pending.length }}</span>
+                    </div>
+                    <div v-if="!collapsedGroups[`${quadrant.type}-${dateKey}-pending`]" class="status-group-content">
+                      <task-item
+                        v-for="task in dateGroup.pending"
+                        :key="task.id"
+                        :task="task"
+                        @toggle="() => taskStore.toggleTask(task.id)"
+                        @edit="() => handleEditTask(task)"
+                        @view="() => handleViewTask(task)"
+                      />
+                    </div>
                   </div>
                 </div>
-                <!-- 已完成任务 -->
-                <div v-if="dateGroup.completed.length > 0" class="status-group">
+
+                <!-- 已完成任务合并显示 -->
+                <div v-if="getQuadrantCompletedTasks(quadrant.type).length > 0" class="status-group">
                   <div class="status-group-header">
                     <el-icon 
                       class="collapse-icon"
-                      :class="{ collapsed: collapsedGroups[`${quadrant.type}-${dateKey}-completed`] }"
-                      @click="toggleGroup(`${quadrant.type}-${dateKey}-completed`)"
+                      :class="{ collapsed: collapsedGroups[`${quadrant.type}-completed`] }"
+                      @click="toggleGroup(`${quadrant.type}-completed`)"
                     >
                       <ArrowDown />
                     </el-icon>
-                    <span class="status-group-title">已完成 {{ dateGroup.completed.length }}</span>
+                    <span class="status-group-title">
+                      已完成 {{ getQuadrantCompletedTasks(quadrant.type).length }}
+                    </span>
                   </div>
-                  <div v-if="!collapsedGroups[`${quadrant.type}-${dateKey}-completed`]" class="status-group-content">
+                  <div v-if="!collapsedGroups[`${quadrant.type}-completed`]" class="status-group-content">
                     <task-item
-                      v-for="task in dateGroup.completed"
+                      v-for="task in getQuadrantCompletedTasks(quadrant.type)"
                       :key="task.id"
                       :task="task"
                       @toggle="() => taskStore.toggleTask(task.id)"
                       @edit="() => handleEditTask(task)"
+                      @view="() => handleViewTask(task)"
                     />
-                    <div v-if="dateGroup.completed.length >= 5" class="view-more">
+                    <div v-if="getQuadrantCompletedTasks(quadrant.type).length >= 5" class="view-more">
                       <a href="#" @click.prevent>查看更多</a>
                     </div>
                   </div>
                 </div>
+              </template>
+              <div v-else class="empty-quadrant">
+                没有任务
               </div>
-            </template>
-            <div v-else class="empty-quadrant">
-              没有任务
             </div>
           </div>
         </div>
@@ -120,6 +138,7 @@
           :task="task"
           @toggle="() => taskStore.toggleTask(task.id)"
           @edit="() => handleEditTask(task)"
+          @view="() => handleViewTask(task)"
         />
           </div>
         </div>
@@ -140,6 +159,11 @@
       :task="editingTask"
       @save="handleSaveTask"
     />
+    <task-detail-dialog
+      v-model="detailDialogVisible"
+      :task="viewingTask"
+      @save="handleSaveDetail"
+    />
   </div>
 </template>
 
@@ -149,6 +173,7 @@ import { useTaskStore } from '@/stores/taskStore'
 import { WarningFilled, InfoFilled } from '@element-plus/icons-vue'
 import TaskItem from './TaskItem.vue'
 import TaskDialog from './TaskDialog.vue'
+import TaskDetailDialog from './TaskDetailDialog.vue'
 import type { QuadrantType, Task } from '@/types/task'
 
 const taskStore = useTaskStore()
@@ -157,9 +182,12 @@ const collapsedGroups = reactive<Record<string, boolean>>({})
 const collapsedQuadrants = reactive<Record<string, boolean>>({})
 const editingTask = ref<Task | null>(null)
 const dialogVisible = ref(false)
+const viewingTask = ref<Task | null>(null)
+const detailDialogVisible = ref(false)
 
 const currentView = computed(() => taskStore.currentView)
 const currentFilter = computed(() => taskStore.currentFilter)
+const hideCompleted = computed(() => taskStore.hideCompleted)
 
 const currentTitle = computed(() => {
   if (currentView.value === 'quadrant') {
@@ -244,6 +272,15 @@ function getQuadrantTasksGrouped(quadrantType: QuadrantType) {
   return sorted
 }
 
+function getQuadrantCompletedTasks(quadrantType: QuadrantType): Task[] {
+  const quadrant = tasksByQuadrant.value[quadrantType]
+  return [...quadrant.completed].sort((a, b) => {
+    const aTime = a.date ? new Date(a.date).getTime() : 0
+    const bTime = b.date ? new Date(b.date).getTime() : 0
+    return bTime - aTime
+  })
+}
+
 function handleAddTask() {
   if (newTaskTitle.value.trim()) {
     taskStore.addTask({
@@ -271,9 +308,26 @@ function handleEditTask(task: Task) {
   dialogVisible.value = true
 }
 
+function handleViewTask(task: Task) {
+  viewingTask.value = task
+  detailDialogVisible.value = true
+}
+
 function handleSaveTask(updates: Partial<Task>) {
   if (editingTask.value) {
     taskStore.updateTask(editingTask.value.id, updates)
+  }
+}
+
+function handleSaveDetail(updates: Partial<Task>) {
+  if (viewingTask.value) {
+    taskStore.updateTask(viewingTask.value.id, updates)
+  }
+}
+
+function handleHeaderCommand(command: string) {
+  if (command === 'toggle-hide-completed') {
+    taskStore.toggleHideCompleted()
   }
 }
 </script>
@@ -327,6 +381,12 @@ function handleSaveTask(updates: Partial<Task>) {
   cursor: pointer;
 }
 
+.more-trigger {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+
 .task-input-wrapper {
   padding: 16px 24px;
   border-bottom: 1px solid #f0f0f0;
@@ -336,17 +396,36 @@ function handleSaveTask(updates: Partial<Task>) {
   width: 100%;
 }
 
-:deep(.el-input__inner) {
-  border: 1px solid #e0e0e0;
-  border-radius: 6px;
-  padding: 10px 12px 10px 36px;
-  font-size: 14px;
-  background-color: #f5f5f5;
+.task-input :deep(.el-input__wrapper) {
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  background-color: #f9fafb;
+  box-shadow: none;
+  padding: 2px 6px 2px 10px;
+  transition: all 0.2s ease;
 }
 
-:deep(.el-input__inner):focus {
-  border-color: #409eff;
+.task-input :deep(.el-input__wrapper:hover) {
+  border-color: #cbd5e1;
   background-color: #fff;
+}
+
+.task-input :deep(.el-input__wrapper.is-focus) {
+  border-color: #3b82f6;
+  background-color: #fff;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.task-input :deep(.el-input__inner) {
+  border: none;
+  background: transparent;
+  padding: 10px 10px 10px 6px;
+  font-size: 14px;
+}
+
+.task-input :deep(.el-input__prefix) {
+  color: #94a3b8;
+  font-size: 16px;
 }
 
 .task-list {
@@ -390,16 +469,26 @@ function handleSaveTask(updates: Partial<Task>) {
 }
 
 /* 四象限视图样式 */
-.quadrant-group {
-  margin-bottom: 24px;
+.quadrant-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.quadrant-card {
+  background-color: #fff;
+  border: 1px solid #f0f0f0;
+  border-radius: 12px;
+  padding: 12px 16px;
+  min-height: 240px;
 }
 
 .quadrant-header {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 12px;
-  padding: 8px 0;
+  margin-bottom: 10px;
+  padding: 4px 0;
 }
 
 .quadrant-header-icon {
@@ -414,13 +503,14 @@ function handleSaveTask(updates: Partial<Task>) {
 }
 
 .quadrant-content {
-  padding-left: 26px;
+  padding-left: 0;
 }
 
 .empty-quadrant {
-  padding: 20px 0;
+  padding: 40px 0;
   color: #999;
   font-size: 13px;
+  text-align: center;
 }
 
 .date-group {
@@ -446,7 +536,13 @@ function handleSaveTask(updates: Partial<Task>) {
 }
 
 .status-group-content {
-  padding-left: 22px;
+  padding-left: 0;
+}
+
+@media (max-width: 960px) {
+  .quadrant-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .view-more {

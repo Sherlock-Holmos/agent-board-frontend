@@ -1,6 +1,6 @@
 <template>
   <div class="app-container">
-    <Sidebar />
+    <Sidebar :compact="currentView === 'quadrant'" />
     <MainContent />
   </div>
 </template>
@@ -8,6 +8,11 @@
 <script setup lang="ts">
 import Sidebar from '@/components/Sidebar.vue'
 import MainContent from '@/components/MainContent.vue'
+import { useTaskStore } from '@/stores/taskStore'
+import { computed } from 'vue'
+
+const taskStore = useTaskStore()
+const currentView = computed(() => taskStore.currentView)
 </script>
 
 <style scoped>

@@ -1,5 +1,5 @@
 <template>
-  <div class="task-item" @dblclick="$emit('edit')">
+  <div class="task-item" @click="$emit('view')" @dblclick="$emit('edit')">
     <el-checkbox
       :model-value="task.completed"
       @change="$emit('toggle')"
@@ -32,6 +32,7 @@ const props = defineProps<{
 defineEmits<{
   toggle: []
   edit: []
+  view: []
 }>()
 
 const taskStore = useTaskStore()

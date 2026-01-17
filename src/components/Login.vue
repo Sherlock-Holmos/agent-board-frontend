@@ -6,23 +6,42 @@
         <div class="logo-icon">
           <el-icon :size="32" color="#409eff"><CircleCheck /></el-icon>
         </div>
-        <span class="logo-text">滴答清单</span>
-      </div>
-      <div class="register-section">
-        <span class="register-text">还没有账号?</span>
-        <el-button type="primary" class="register-btn" @click="handleRegister">注册</el-button>
+        <span class="logo-text">AgentBoard</span>
       </div>
     </div>
 
     <!-- 中央登录卡片 -->
     <div class="login-card">
       <h1 class="login-title">登录</h1>
+
+      <div class="card-illustration" aria-hidden="true">
+        <svg viewBox="0 0 320 120" class="illustration">
+          <defs>
+            <linearGradient id="lg" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#60a5fa" />
+              <stop offset="100%" stop-color="#93c5fd" />
+            </linearGradient>
+          </defs>
+          <rect x="8" y="18" width="120" height="80" rx="16" fill="url(#lg)" opacity="0.18" />
+          <rect x="28" y="34" width="180" height="12" rx="6" fill="#e5e7eb" />
+          <rect x="28" y="56" width="220" height="12" rx="6" fill="#e5e7eb" />
+          <rect x="28" y="78" width="140" height="12" rx="6" fill="#e5e7eb" />
+          <circle cx="255" cy="40" r="20" fill="#dbeafe" />
+          <circle cx="255" cy="40" r="12" fill="#60a5fa" opacity="0.65" />
+        </svg>
+      </div>
       
-      <el-form :model="loginForm" :rules="rules" ref="formRef" class="login-form">
+      <el-form
+        :model="loginForm"
+        :rules="rules"
+        ref="formRef"
+        class="login-form"
+        @submit.prevent="handleLogin"
+      >
         <el-form-item prop="account">
           <el-input
             v-model="loginForm.account"
-            placeholder="手机号/邮箱"
+            placeholder="用户名/邮箱"
             size="large"
             class="login-input"
           />
@@ -46,7 +65,7 @@
             size="large"
             class="login-btn"
             :loading="loading"
-            @click="handleLogin"
+            native-type="submit"
           >
             登录
           </el-button>
@@ -113,22 +132,30 @@ function handleLogin() {
   formRef.value?.validate((valid) => {
     if (valid) {
       loading.value = true
-      // 模拟登录请求
-      setTimeout(() => {
-        loading.value = false
-        userStore.login({
-          account: loginForm.account,
-          name: loginForm.account
+      userStore
+        .loginByApi({
+          name: loginForm.account.trim(),
+          password: loginForm.password
         })
-        ElMessage.success('登录成功')
-        router.push('/')
-      }, 1000)
+        .then(() => {
+          ElMessage.success('登录成功')
+          router.push('/')
+        })
+        .catch((err: unknown) => {
+          const anyErr = err as any
+          const backendMessage = anyErr?.response?.data?.message || anyErr?.response?.data?.error
+          const message = backendMessage || (err instanceof Error ? err.message : '登录失败')
+          ElMessage.error(message)
+        })
+        .finally(() => {
+          loading.value = false
+        })
     }
   })
 }
 
 function handleRegister() {
-  ElMessage.info('注册功能开发中')
+  router.push('/register')
 }
 
 function handleForgotPassword() {
@@ -147,7 +174,7 @@ function handleMoreLogin() {
 <style scoped>
 .login-page {
   min-height: 100vh;
-  background-color: #f5f5f5;
+  background: radial-gradient(1200px 600px at 10% 10%, #e9f2ff 0%, #f7f9fc 45%, #f5f6f8 100%);
   display: flex;
   flex-direction: column;
   position: relative;
@@ -158,7 +185,7 @@ function handleMoreLogin() {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px 40px;
+  padding: 24px 48px;
   background-color: transparent;
 }
 
@@ -176,8 +203,9 @@ function handleMoreLogin() {
 
 .logo-text {
   font-size: 20px;
-  font-weight: 500;
-  color: #333;
+  font-weight: 600;
+  color: #1f2a37;
+  letter-spacing: 0.4px;
 }
 
 .register-section {
@@ -203,25 +231,36 @@ function handleMoreLogin() {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 40px;
-}
-
-.login-card {
+  padding: 48px 40px;
   width: 100%;
-  max-width: 400px;
+  max-width: 440px;
   margin: 0 auto;
   background-color: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-  padding: 40px;
+  border-radius: 16px;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.12);
+  border: 1px solid #eef2f6;
 }
 
 .login-title {
-  font-size: 28px;
-  font-weight: 600;
-  color: #333;
-  margin: 0 0 32px 0;
+  font-size: 30px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 22px 0;
   text-align: center;
+  line-height: 1.2;
+}
+
+.card-illustration {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 18px;
+}
+
+.illustration {
+  width: 100%;
+  max-width: 320px;
+  height: 120px;
 }
 
 .login-form {
@@ -232,34 +271,51 @@ function handleMoreLogin() {
   width: 100%;
 }
 
-:deep(.el-input__inner) {
-  border: 1px solid #e0e0e0;
-  border-radius: 6px;
-  padding: 12px 16px;
-  font-size: 14px;
+.login-input :deep(.el-input__wrapper) {
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  background-color: #f9fafb;
+  box-shadow: none;
+  padding: 2px 6px;
+  transition: all 0.2s ease;
 }
 
-:deep(.el-input__inner):focus {
-  border-color: #409eff;
+.login-input :deep(.el-input__wrapper:hover) {
+  border-color: #cbd5e1;
+  background-color: #fff;
+}
+
+.login-input :deep(.el-input__wrapper.is-focus) {
+  border-color: #3b82f6;
+  background-color: #fff;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.login-input :deep(.el-input__inner) {
+  border: none;
+  background: transparent;
+  padding: 10px 10px;
+  font-size: 14px;
 }
 
 .login-btn {
   width: 100%;
-  border-radius: 6px;
+  border-radius: 10px;
   padding: 12px;
   font-size: 16px;
-  font-weight: 500;
+  font-weight: 600;
   margin-top: 8px;
+  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.25);
 }
 
 .forgot-password {
   text-align: center;
-  margin-top: 16px;
+  margin-top: 18px;
 }
 
 .forgot-password a {
   font-size: 13px;
-  color: #999;
+  color: #6b7280;
   text-decoration: none;
 }
 
@@ -277,13 +333,14 @@ function handleMoreLogin() {
   background-color: #07c160;
   border-color: #07c160;
   color: #fff;
-  border-radius: 6px;
+  border-radius: 10px;
   padding: 12px;
   font-size: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
+  box-shadow: 0 8px 20px rgba(7, 193, 96, 0.25);
 }
 
 .wechat-btn:hover {
@@ -321,13 +378,13 @@ function handleMoreLogin() {
 /* 底部注册提示 */
 .footer {
   text-align: center;
-  padding: 20px 0 40px;
+  padding: 24px 0 48px;
   background-color: transparent;
 }
 
 .footer-text {
   font-size: 14px;
-  color: #999;
+  color: #6b7280;
   margin-right: 8px;
 }
 

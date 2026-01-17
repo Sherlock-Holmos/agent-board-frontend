@@ -11,6 +11,12 @@ const router = createRouter({
       meta: { requiresAuth: false }
     },
     {
+      path: '/register',
+      name: 'Register',
+      component: () => import('@/components/Register.vue'),
+      meta: { requiresAuth: false }
+    },
+    {
       path: '/',
       name: 'Home',
       component: () => import('@/views/Home.vue'),
@@ -23,24 +29,31 @@ const router = createRouter({
   ]
 })
 
-router.beforeEach((to, from, next) => {
+// 使用 async guard 以便在首次进入受保护页面时拉取 /auth/me
+router.beforeEach(async (to) => {
   const userStore = useUserStore()
-  
-  // 初始化用户状态
   userStore.initUser()
 
-  // 如果访问登录页，直接允许访问
   if (to.path === '/login') {
-    next()
-    return
+    return true
   }
 
-  // 如果访问需要认证的页面但未登录，跳转到登录页
-  if (to.meta.requiresAuth && !userStore.isLoggedIn) {
-    next('/login')
-  } else {
-    next()
+  if (to.meta.requiresAuth) {
+    if (!userStore.token) {
+      return '/login'
+    }
+
+    // 有 token 但还没有用户信息时，拉取一次当前用户
+    if (!userStore.user) {
+      await userStore.fetchMe()
+      if (!userStore.token) {
+        // fetchMe 里遇到 401 会 logout
+        return '/login'
+      }
+    }
   }
+
+  return true
 })
 
 export default router
