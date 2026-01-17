@@ -2,7 +2,8 @@
   <div class="task-item" @click="$emit('view')" @dblclick="$emit('edit')">
     <el-checkbox
       :model-value="task.completed"
-      @change="$emit('toggle')"
+      @click.stop
+      @change="(val) => $emit('toggle', val)"
       class="task-checkbox"
     />
     <span 
@@ -30,7 +31,7 @@ const props = defineProps<{
 }>()
 
 defineEmits<{
-  toggle: []
+  toggle: [value: boolean]
   edit: []
   view: []
 }>()

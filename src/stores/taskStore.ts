@@ -258,12 +258,14 @@ export const useTaskStore = defineStore('task', () => {
     tasks.value.push(newTask)
   }
 
-  async function toggleTask(id: string) {
+  async function toggleTask(id: string, completed?: boolean) {
     const task = tasks.value.find(t => t.id === id)
     if (!task) return
 
-    const nextCompleted = !task.completed
+    const nextCompleted = typeof completed === 'boolean' ? completed : !task.completed
     const numericId = Number(id)
+    const prevCompleted = task.completed
+    task.completed = nextCompleted
 
     try {
       const updated = nextCompleted
@@ -271,8 +273,9 @@ export const useTaskStore = defineStore('task', () => {
         : await apiUncompleteTodo(numericId)
       const mapped = mapTodoToTask(updated)
       Object.assign(task, mapped)
-    } catch {
-      // ignore
+    } catch (err: unknown) {
+      task.completed = prevCompleted
+      throw err
     }
   }
 
@@ -311,14 +314,41 @@ export const useTaskStore = defineStore('task', () => {
     if (!task) return
 
     const numericId = Number(id)
-    const payload: TodoUpdateRequest = {
-      title: updates.title ?? task.title,
-      completed: updates.completed ?? task.completed,
-      dueDate: updates.date ? updates.date.toISOString().split('T')[0] : task.date ? task.date.toISOString().split('T')[0] : null,
-      listName: updates.checklist ?? task.checklist,
-      priority: updates.priority ? updates.priority.toUpperCase() : task.priority ? task.priority.toUpperCase() : undefined,
-      tags: updates.tags ? updates.tags.join(',') : task.tags ? task.tags.join(',') : undefined
+    const payload: TodoUpdateRequest = {}
+
+    if (updates.title !== undefined && updates.title !== task.title) {
+      payload.title = updates.title
     }
+
+    if (updates.completed !== undefined && updates.completed !== task.completed) {
+      payload.completed = updates.completed
+    }
+
+    if (updates.date !== undefined) {
+      const nextDate = updates.date ? updates.date.toISOString().split('T')[0] : null
+      const currentDate = task.date ? task.date.toISOString().split('T')[0] : null
+      if (nextDate !== currentDate) {
+        payload.dueDate = nextDate
+      }
+    }
+
+    if (updates.checklist !== undefined && updates.checklist !== task.checklist) {
+      payload.listName = updates.checklist
+    }
+
+    if (updates.priority !== undefined && updates.priority !== task.priority) {
+      payload.priority = updates.priority ? updates.priority.toUpperCase() : undefined
+    }
+
+    if (updates.tags !== undefined) {
+      const nextTags = updates.tags ? updates.tags.join(',') : undefined
+      const currentTags = task.tags ? task.tags.join(',') : undefined
+      if (nextTags !== currentTags) {
+        payload.tags = nextTags
+      }
+    }
+
+    if (Object.keys(payload).length === 0) return
 
     const updated = await apiPatchTodo(numericId, payload)
     const mapped = mapTodoToTask(updated)

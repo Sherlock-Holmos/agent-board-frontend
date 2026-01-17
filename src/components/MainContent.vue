@@ -73,7 +73,7 @@
                         v-for="task in dateGroup.pending"
                         :key="task.id"
                         :task="task"
-                        @toggle="() => taskStore.toggleTask(task.id)"
+                        @toggle="(val) => handleToggleTask(task.id, val)"
                         @edit="() => handleEditTask(task)"
                         @view="() => handleViewTask(task)"
                       />
@@ -100,7 +100,7 @@
                       v-for="task in getQuadrantCompletedTasks(quadrant.type)"
                       :key="task.id"
                       :task="task"
-                      @toggle="() => taskStore.toggleTask(task.id)"
+                      @toggle="(val) => handleToggleTask(task.id, val)"
                       @edit="() => handleEditTask(task)"
                       @view="() => handleViewTask(task)"
                     />
@@ -136,7 +136,7 @@
           v-for="task in tasks" 
           :key="task.id" 
           :task="task"
-          @toggle="() => taskStore.toggleTask(task.id)"
+          @toggle="(val) => handleToggleTask(task.id, val)"
           @edit="() => handleEditTask(task)"
           @view="() => handleViewTask(task)"
         />
@@ -347,6 +347,15 @@ function handleSaveDetail(updates: Partial<Task>) {
 function handleHeaderCommand(command: string) {
   if (command === 'toggle-hide-completed') {
     taskStore.toggleHideCompleted()
+  }
+}
+
+async function handleToggleTask(id: string, completed: boolean) {
+  try {
+    await taskStore.toggleTask(id, completed)
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : '更新任务失败'
+    ElMessage.error(message)
   }
 }
 </script>

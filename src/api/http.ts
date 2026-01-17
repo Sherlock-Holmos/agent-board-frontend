@@ -10,7 +10,7 @@ export const http = axios.create({
 http.interceptors.request.use((config) => {
   const url = config.url || ''
   const isAuthEndpoint = url.startsWith('/user/auth/login') || url.startsWith('/user/auth/register')
-  const isTodoEndpoint = url.startsWith('/todos')
+  const isTodoEndpoint = url.startsWith('/todos') || url.startsWith('/api/todos')
   const token = localStorage.getItem('token')
   if (token && !isAuthEndpoint) {
     config.headers = config.headers ?? {}
