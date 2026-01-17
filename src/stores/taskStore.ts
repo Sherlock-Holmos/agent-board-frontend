@@ -1,77 +1,80 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { Task, FilterType, QuadrantType } from '@/types/task'
+import {
+  apiCreateTodo,
+  apiCompleteTodo,
+  apiDeleteTodo,
+  apiGetAllTodos,
+  apiGetInboxTodos,
+  apiGetNext7DaysTodos,
+  apiGetTodayTodos,
+  apiPatchTodo,
+  apiUncompleteTodo
+} from '@/api/todos'
+import type { TodoDTO, TodoUpdateRequest } from '@/api/types'
 
 export const useTaskStore = defineStore('task', () => {
-  const tasks = ref<Task[]>([
-    {
-      id: '1',
-      title: '完成网页报告',
-      completed: false,
-      date: null,
-      checklist: '收集箱',
-      important: false,
-      urgent: false
-    },
-    {
-      id: '2',
-      title: '项目手册',
-      completed: true,
-      date: new Date('2024-12-01'),
-      checklist: '收集箱',
-      important: true,
-      urgent: false
-    },
-    {
-      id: '3',
-      title: '打印六级准考证',
-      completed: true,
-      date: new Date('2024-12-06'),
-      checklist: '收集箱',
-      important: false,
-      urgent: false
-    },
-    {
-      id: '4',
-      title: '考六级',
-      completed: true,
-      date: new Date('2024-12-14'),
-      checklist: '收集箱',
-      important: false,
-      urgent: false
-    },
-    {
-      id: '5',
-      title: '完成农业作业',
-      completed: true,
-      date: new Date('2024-11-06'),
-      checklist: '收集箱',
-      important: false,
-      urgent: false
-    },
-    {
-      id: '6',
-      title: '开始着手计网实验报告',
-      completed: true,
-      date: new Date('2024-11-06'),
-      checklist: '收集箱',
-      important: false,
-      urgent: false
-    },
-    {
-      id: '7',
-      title: '完成网页',
-      completed: true,
-      date: new Date('2024-11-06'),
-      checklist: '收集箱',
-      important: false,
-      urgent: false
-    }
-  ])
+  const tasks = ref<Task[]>([])
+  const lastFetchError = ref<string | null>(null)
+  const lastFetchAt = ref<Date | null>(null)
 
   const currentFilter = ref<FilterType>('all')
   const currentView = ref<'normal' | 'quadrant'>('normal')
   const hideCompleted = ref(false)
+
+  function toDate(value?: string | Date | null) {
+    if (!value) return null
+    const date = value instanceof Date ? value : new Date(value)
+    return Number.isNaN(date.getTime()) ? null : date
+  }
+
+  function mapTodoToTask(todo: TodoDTO): Task {
+    const title = todo.title || todo.name || ''
+    const completed = todo.completed ?? todo.isCompleted ?? false
+    const date = toDate(todo.dueDate || todo.date || todo.todoDate)
+
+    return {
+      id: String(todo.id ?? Date.now()),
+      title,
+      completed,
+      date,
+      checklist: todo.listName || '收集箱',
+      priority: (todo.priority?.toLowerCase() as Task['priority']) ?? undefined,
+      tags: todo.tags ? todo.tags.split(',').map(t => t.trim()).filter(Boolean) : undefined,
+      important: todo.priority ? todo.priority.toUpperCase() === 'HIGH' : false,
+      urgent: false
+    }
+  }
+
+  async function fetchTodosForCurrentFilter() {
+    lastFetchError.value = null
+    let list: TodoDTO[] = []
+    try {
+      switch (currentFilter.value) {
+        case 'today':
+          list = await apiGetTodayTodos()
+          break
+        case 'last7days':
+          list = await apiGetNext7DaysTodos()
+          break
+        case 'inbox':
+          list = await apiGetInboxTodos()
+          break
+        case 'summary':
+        case 'all':
+        default:
+          list = await apiGetAllTodos()
+          break
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : '获取任务失败'
+      lastFetchError.value = message
+      list = []
+    }
+    tasks.value = list.map(mapTodoToTask)
+    lastFetchAt.value = new Date()
+  }
 
   const filteredTasks = computed(() => {
     const today = new Date()
@@ -239,26 +242,46 @@ export const useTaskStore = defineStore('task', () => {
     }
   })
 
-  function addTask(task: Omit<Task, 'id'>) {
-    const newTask: Task = {
-      ...task,
-      id: Date.now().toString()
+  async function addTask(task: Omit<Task, 'id'>) {
+    const payload: TodoDTO = {
+      title: task.title,
+      description: undefined,
+      completed: task.completed,
+      dueDate: task.date ? task.date.toISOString().split('T')[0] : null,
+      listName: task.checklist,
+      priority: task.priority ? task.priority.toUpperCase() : undefined,
+      tags: task.tags ? task.tags.join(',') : undefined
     }
+
+    const created = await apiCreateTodo(payload)
+    const newTask = mapTodoToTask(created)
     tasks.value.push(newTask)
   }
 
-  function toggleTask(id: string) {
+  async function toggleTask(id: string) {
     const task = tasks.value.find(t => t.id === id)
-    if (task) {
-      task.completed = !task.completed
+    if (!task) return
+
+    const nextCompleted = !task.completed
+    const numericId = Number(id)
+
+    try {
+      const updated = nextCompleted
+        ? await apiCompleteTodo(numericId)
+        : await apiUncompleteTodo(numericId)
+      const mapped = mapTodoToTask(updated)
+      Object.assign(task, mapped)
+    } catch {
+      // ignore
     }
   }
 
-  function deleteTask(id: string) {
+  async function deleteTask(id: string) {
     const index = tasks.value.findIndex(t => t.id === id)
-    if (index > -1) {
-      tasks.value.splice(index, 1)
-    }
+    if (index === -1) return
+    const numericId = Number(id)
+    await apiDeleteTodo(numericId)
+    tasks.value.splice(index, 1)
   }
 
   function setFilter(filter: FilterType) {
@@ -267,6 +290,8 @@ export const useTaskStore = defineStore('task', () => {
     if (currentView.value === 'quadrant' && filter !== 'quadrant') {
       currentView.value = 'normal'
     }
+
+    void fetchTodosForCurrentFilter()
   }
 
   function setView(view: 'normal' | 'quadrant') {
@@ -275,13 +300,29 @@ export const useTaskStore = defineStore('task', () => {
     if (view === 'quadrant' && currentFilter.value === 'quadrant') {
       currentFilter.value = 'all'
     }
+
+    if (view === 'quadrant') {
+      void fetchTodosForCurrentFilter()
+    }
   }
 
-  function updateTask(id: string, updates: Partial<Task>) {
+  async function updateTask(id: string, updates: Partial<Task>) {
     const task = tasks.value.find(t => t.id === id)
-    if (task) {
-      Object.assign(task, updates)
+    if (!task) return
+
+    const numericId = Number(id)
+    const payload: TodoUpdateRequest = {
+      title: updates.title ?? task.title,
+      completed: updates.completed ?? task.completed,
+      dueDate: updates.date ? updates.date.toISOString().split('T')[0] : task.date ? task.date.toISOString().split('T')[0] : null,
+      listName: updates.checklist ?? task.checklist,
+      priority: updates.priority ? updates.priority.toUpperCase() : task.priority ? task.priority.toUpperCase() : undefined,
+      tags: updates.tags ? updates.tags.join(',') : task.tags ? task.tags.join(',') : undefined
     }
+
+    const updated = await apiPatchTodo(numericId, payload)
+    const mapped = mapTodoToTask(updated)
+    Object.assign(task, mapped)
   }
 
   function toggleHideCompleted() {
@@ -298,11 +339,15 @@ export const useTaskStore = defineStore('task', () => {
     })
   }
 
+  void fetchTodosForCurrentFilter()
+
   return {
     tasks,
     currentFilter,
     currentView,
     hideCompleted,
+    lastFetchError,
+    lastFetchAt,
     filteredTasks,
     tasksByDate,
     tasksByQuadrant,
@@ -316,6 +361,7 @@ export const useTaskStore = defineStore('task', () => {
     formatTaskDate,
     getQuadrantType,
     groupTasksByDateAndStatus,
-    toggleHideCompleted
+    toggleHideCompleted,
+    fetchTodosForCurrentFilter
   }
 })

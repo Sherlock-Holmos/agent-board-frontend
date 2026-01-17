@@ -143,7 +143,9 @@
           </div>
         </div>
         <div v-if="Object.keys(tasksByDate).length === 0" class="empty-state">
-          暂无任务
+          <div>暂无任务</div>
+          <div v-if="lastFetchError" class="empty-error">{{ lastFetchError }}</div>
+          <div v-else-if="lastFetchAt" class="empty-hint">最近刷新：{{ new Date(lastFetchAt).toLocaleString('zh-CN') }}</div>
         </div>
       </template>
     </div>
@@ -168,15 +170,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, reactive } from 'vue'
+import { ref, computed, reactive, watch } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useTaskStore } from '@/stores/taskStore'
+import { useUserStore } from '@/stores/userStore'
 import { WarningFilled, InfoFilled } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 import TaskItem from './TaskItem.vue'
 import TaskDialog from './TaskDialog.vue'
 import TaskDetailDialog from './TaskDetailDialog.vue'
 import type { QuadrantType, Task } from '@/types/task'
 
 const taskStore = useTaskStore()
+const userStore = useUserStore()
 const newTaskTitle = ref('')
 const collapsedGroups = reactive<Record<string, boolean>>({})
 const collapsedQuadrants = reactive<Record<string, boolean>>({})
@@ -185,9 +191,7 @@ const dialogVisible = ref(false)
 const viewingTask = ref<Task | null>(null)
 const detailDialogVisible = ref(false)
 
-const currentView = computed(() => taskStore.currentView)
-const currentFilter = computed(() => taskStore.currentFilter)
-const hideCompleted = computed(() => taskStore.hideCompleted)
+const { currentView, currentFilter, hideCompleted, tasksByDate, tasksByQuadrant, lastFetchError, lastFetchAt } = storeToRefs(taskStore)
 
 const currentTitle = computed(() => {
   if (currentView.value === 'quadrant') {
@@ -207,8 +211,18 @@ const currentChecklist = computed(() => {
   return '收集箱'
 })
 
-const tasksByDate = computed(() => taskStore.tasksByDate)
-const tasksByQuadrant = computed(() => taskStore.tasksByQuadrant)
+watch(
+  () => userStore.token,
+  async (token) => {
+    if (token) {
+      await taskStore.fetchTodosForCurrentFilter()
+      if (lastFetchError.value) {
+        ElMessage.error(lastFetchError.value)
+      }
+    }
+  },
+  { immediate: true }
+)
 
 const filteredTasksCount = computed(() => {
   if (currentView.value === 'quadrant') {
@@ -281,17 +295,22 @@ function getQuadrantCompletedTasks(quadrantType: QuadrantType): Task[] {
   })
 }
 
-function handleAddTask() {
+async function handleAddTask() {
   if (newTaskTitle.value.trim()) {
-    taskStore.addTask({
-      title: newTaskTitle.value.trim(),
-      completed: false,
-      date: null,
-      checklist: '收集箱',
-      important: false,
-      urgent: false
-    })
-    newTaskTitle.value = ''
+    try {
+      await taskStore.addTask({
+        title: newTaskTitle.value.trim(),
+        completed: false,
+        date: null,
+        checklist: '收集箱',
+        important: false,
+        urgent: false
+      })
+      newTaskTitle.value = ''
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : '创建任务失败'
+      ElMessage.error(message)
+    }
   }
 }
 
@@ -564,6 +583,18 @@ function handleHeaderCommand(command: string) {
   padding: 40px 0;
   color: #999;
   font-size: 14px;
+}
+
+.empty-error {
+  margin-top: 8px;
+  color: #ef4444;
+  font-size: 12px;
+}
+
+.empty-hint {
+  margin-top: 8px;
+  color: #94a3b8;
+  font-size: 12px;
 }
 
 .watermark {

@@ -7,19 +7,45 @@ export interface ApiResponse<T> {
   timestamp?: number
 }
 
-export interface UserDTO {
-  id: number
-  name: string
-  email: string
-  phone: string
-  password?: string
-  createTime: string
-  updateTime: string
+export interface TodoDTO {
+  id?: number
+  title?: string
+  name?: string
+  description?: string
+  listName?: string
+  tags?: string
+  completed?: boolean
+  isCompleted?: boolean
+  priority?: string
+  dueDate?: string | Date | null
+  date?: string | Date | null
+  todoDate?: string | Date | null
+  important?: boolean
+  urgent?: boolean
+  createdAt?: string | Date | null
+  updatedAt?: string | Date | null
+  deleted?: boolean
+  userId?: number
 }
 
-export interface UserLoginResponse {
-  token: string
-  user: UserDTO
+export interface UserDTO {
+  id: number
+  name?: string
+  email?: string
+  phone?: string
+  createdAt?: string | Date | null
+  updatedAt?: string | Date | null
+}
+
+export interface TodoUpdateRequest {
+  title?: string
+  description?: string
+  listName?: string
+  tags?: string
+  completed?: boolean
+  priority?: string
+  dueDate?: string | Date | null
+  deleted?: boolean
 }
 
 export interface UserLoginRequest {
