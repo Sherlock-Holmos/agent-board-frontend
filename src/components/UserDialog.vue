@@ -7,27 +7,38 @@
   >
     <div class="content">
       <template v-if="!isEditing">
-        <el-descriptions :column="1" border>
-          <el-descriptions-item label="用户名">
-            {{ userStore.user?.name || '-' }}
-          </el-descriptions-item>
-          <el-descriptions-item label="邮箱">
-            {{ userStore.user?.email || '-' }}
-          </el-descriptions-item>
-          <el-descriptions-item label="手机号">
-            {{ userStore.user?.phone || '-' }}
-          </el-descriptions-item>
-          <el-descriptions-item label="密码">
-            {{ maskedPassword }}
-          </el-descriptions-item>
-          <el-descriptions-item label="创建时间">
-            {{ formattedCreateTime }}
-          </el-descriptions-item>
-        </el-descriptions>
+        <div class="profile-card">
+          <div class="profile-header">
+            <el-avatar :size="56" class="profile-avatar">
+              {{ (userStore.user?.name || 'U').slice(0, 1).toUpperCase() }}
+            </el-avatar>
+            <div class="profile-info">
+              <div class="profile-name">{{ userStore.user?.name || '未设置用户名' }}</div>
+              <div class="profile-sub">
+                <el-tag type="info" effect="light">{{ userStore.user?.email || '未绑定邮箱' }}</el-tag>
+              </div>
+            </div>
+          </div>
+
+          <div class="profile-meta">
+            <div class="meta-item">
+              <span class="meta-label">手机号</span>
+              <span class="meta-value">{{ userStore.user?.phone || '-' }}</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">密码</span>
+              <span class="meta-value">{{ maskedPassword }}</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">创建时间</span>
+              <span class="meta-value">{{ formattedCreateTime }}</span>
+            </div>
+          </div>
+        </div>
       </template>
 
       <template v-else>
-        <el-form :model="form" label-width="80px">
+        <el-form :model="form" label-width="80px" class="edit-form">
           <el-form-item label="用户名">
             <el-input v-model="form.name" placeholder="请输入用户名" />
           </el-form-item>
@@ -109,7 +120,7 @@ const maskedPassword = computed(() => {
 })
 
 const formattedCreateTime = computed(() => {
-  const raw = userStore.user?.createTime
+  const raw = userStore.user?.createdAt || userStore.user?.createTime
   if (!raw) return '-'
   const date = new Date(raw)
   if (Number.isNaN(date.getTime())) return raw
@@ -243,5 +254,75 @@ async function handleDeleteAccount() {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.content {
+  padding: 4px 2px 0;
+}
+
+.profile-card {
+  border: 1px solid #eef2f7;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+  padding: 16px;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+}
+
+.profile-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.profile-avatar {
+  background: #e0ecff;
+  color: #2563eb;
+  font-weight: 600;
+}
+
+.profile-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.profile-name {
+  font-size: 18px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.profile-sub :deep(.el-tag) {
+  border-radius: 999px;
+}
+
+.profile-meta {
+  display: grid;
+  gap: 10px;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px solid #eef2f7;
+}
+
+.meta-label {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.meta-value {
+  font-size: 13px;
+  color: #0f172a;
+}
+
+.edit-form :deep(.el-input__wrapper) {
+  border-radius: 10px;
 }
 </style>

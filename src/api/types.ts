@@ -33,6 +33,7 @@ export interface UserDTO {
   name?: string
   email?: string
   phone?: string
+  createTime?: string | Date | null
   createdAt?: string | Date | null
   updatedAt?: string | Date | null
 }

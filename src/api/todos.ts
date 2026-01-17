@@ -14,16 +14,6 @@ export async function apiCreateTodo(payload: TodoDTO) {
   return extractData(data, {} as TodoDTO)
 }
 
-export async function apiGetTodoById(id: number) {
-  const { data } = await http.get<ApiResponse<TodoDTO> | TodoDTO>(`/todos/${id}`)
-  return extractData(data, {} as TodoDTO)
-}
-
-export async function apiUpdateTodo(id: number, payload: TodoDTO) {
-  const { data } = await http.put<ApiResponse<TodoDTO> | TodoDTO>(`/todos/${id}`, payload)
-  return extractData(data, {} as TodoDTO)
-}
-
 export async function apiPatchTodo(id: number, payload: TodoUpdateRequest) {
   const { data } = await http.patch<ApiResponse<TodoDTO> | TodoDTO>(`/todos/${id}`, payload)
   return extractData(data, {} as TodoDTO)
@@ -31,10 +21,6 @@ export async function apiPatchTodo(id: number, payload: TodoUpdateRequest) {
 
 export async function apiDeleteTodo(id: number) {
   await http.delete(`/todos/${id}`)
-}
-
-export async function apiRestoreTodo(id: number) {
-  await http.post(`/todos/${id}/restore`)
 }
 
 export async function apiCompleteTodo(id: number) {
@@ -67,17 +53,3 @@ export async function apiGetInboxTodos() {
   return extractData(data, [])
 }
 
-export async function apiGetCompletedTodos() {
-  const { data } = await http.get<ApiResponse<TodoDTO[]> | TodoDTO[]>('/todos/completed')
-  return extractData(data, [])
-}
-
-export async function apiGetNoDateTodos() {
-  const { data } = await http.get<ApiResponse<TodoDTO[]> | TodoDTO[]>('/todos/no-date')
-  return extractData(data, [])
-}
-
-export async function apiGetDeletedTodos() {
-  const { data } = await http.get<ApiResponse<TodoDTO[]> | TodoDTO[]>('/todos/deleted')
-  return extractData(data, [])
-}

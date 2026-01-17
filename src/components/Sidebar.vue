@@ -19,12 +19,19 @@
         <el-icon 
           class="icon" 
           :size="24"
+          :class="{ active: currentView === 'calendar' }"
+          @click="handleIconClick('calendar')"
+        >
+          <Calendar />
+        </el-icon>
+        <el-icon 
+          class="icon" 
+          :size="24"
           :class="{ active: currentView === 'quadrant' }"
           @click="handleIconClick('quadrant')"
         >
-          <Grid />
+          <Aim />
         </el-icon>
-        <el-icon class="icon" :size="24"><Aim /></el-icon>
         <el-icon class="icon" :size="24"><Clock /></el-icon>
         <el-icon class="icon" :size="24"><Search /></el-icon>
       </div>
@@ -32,7 +39,7 @@
       <div class="icon-spacer"></div>
 
       <div class="icon-group">
-        <el-icon class="icon" :size="24"><Refresh /></el-icon>
+        <el-icon class="icon" :size="24" @click="handleRefresh"><Refresh /></el-icon>
         <el-icon class="icon" :size="24"><Bell /></el-icon>
         <el-icon class="icon" :size="24"><QuestionFilled /></el-icon>
         <el-icon class="icon" :size="24"><Setting /></el-icon>
@@ -93,18 +100,16 @@ import {
   User, 
   Document, 
   Calendar, 
-  Box,
-  WarningFilled,
-  InfoFilled
+  Box
 } from '@element-plus/icons-vue'
-import type { FilterType, QuadrantType } from '@/types/task'
+import type { FilterType } from '@/types/task'
+import { ElMessage } from 'element-plus'
 
 const props = defineProps<{
   compact?: boolean
 }>()
 
 const taskStore = useTaskStore()
-const selectedQuadrant = ref<QuadrantType | null>(null)
 const userDialogVisible = ref(false)
 
 const currentFilter = computed(() => taskStore.currentFilter)
@@ -147,47 +152,21 @@ const navItems = computed(() => [
   }
 ])
 
-const quadrants = [
-  {
-    type: 'I' as QuadrantType,
-    label: 'I. 重要且紧急',
-    color: '#f56c6c',
-    icon: WarningFilled
-  },
-  {
-    type: 'II' as QuadrantType,
-    label: 'II. 重要不紧急',
-    color: '#e6a23c',
-    icon: InfoFilled
-  },
-  {
-    type: 'III' as QuadrantType,
-    label: 'III. 不重要但紧急',
-    color: '#409eff',
-    icon: InfoFilled
-  },
-  {
-    type: 'IV' as QuadrantType,
-    label: 'IV. 不重要不紧急',
-    color: '#67c23a',
-    icon: InfoFilled
-  }
-]
-
 function handleNavClick(key: FilterType) {
   taskStore.setFilter(key)
   // 切换到普通视图
   if (taskStore.currentView === 'quadrant') {
     taskStore.setView('normal')
   }
-  selectedQuadrant.value = null
 }
 
-function handleIconClick(view: 'normal' | 'quadrant') {
+function handleIconClick(view: 'normal' | 'quadrant' | 'calendar') {
   if (view === 'quadrant') {
     // 先设置过滤器，再切换视图，避免 setFilter 把视图重置为 normal
     taskStore.setFilter('all') // 切换到四象限视图时，使用 all 过滤器
     taskStore.setView('quadrant')
+  } else if (view === 'calendar') {
+    taskStore.setView('calendar')
   } else {
     taskStore.setView('normal')
     // 如果当前没有选中任何导航项，默认选中"所有"
@@ -195,13 +174,18 @@ function handleIconClick(view: 'normal' | 'quadrant') {
       taskStore.setFilter('all')
     }
   }
-  selectedQuadrant.value = null
 }
 
-function handleQuadrantClick(quadrant: QuadrantType) {
-  selectedQuadrant.value = quadrant
-  // 四象限点击时保持四象限视图，但可以用于后续的筛选功能
+async function handleRefresh() {
+  try {
+    await taskStore.fetchTodosForCurrentFilter()
+    ElMessage.success('已刷新')
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : '刷新失败'
+    ElMessage.error(message)
+  }
 }
+
 </script>
 
 <style scoped>

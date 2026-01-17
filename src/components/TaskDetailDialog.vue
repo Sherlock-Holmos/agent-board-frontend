@@ -2,60 +2,81 @@
   <el-dialog
     v-model="visible"
     title="任务详情"
-    width="520px"
+    width="560px"
     @close="handleClose"
   >
     <div v-if="!isEditing" class="detail-view">
-      <el-descriptions :column="1" border>
-        <el-descriptions-item label="标题">{{ task?.title || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="清单">{{ task?.checklist || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="日期">{{ formattedDate }}</el-descriptions-item>
-        <el-descriptions-item label="重要性">{{ task?.important ? '重要' : '不重要' }}</el-descriptions-item>
-        <el-descriptions-item label="紧急度">{{ task?.urgent ? '紧急' : '不紧急' }}</el-descriptions-item>
-        <el-descriptions-item label="状态">{{ task?.completed ? '已完成' : '待办' }}</el-descriptions-item>
-      </el-descriptions>
+      <div class="detail-card">
+        <div class="detail-header">
+          <div class="detail-title">{{ task?.title || '-' }}</div>
+          <el-tag :type="task?.completed ? 'success' : 'info'" effect="light">
+            {{ task?.completed ? '已完成' : '待办' }}
+          </el-tag>
+        </div>
+
+        <div class="detail-meta">
+          <div class="meta-item">
+            <span class="meta-label">清单</span>
+            <span class="meta-value">{{ task?.checklist || '-' }}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">日期</span>
+            <span class="meta-value">{{ formattedDate }}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">重要性</span>
+            <span class="meta-value">{{ task?.important ? '重要' : '不重要' }}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">紧急度</span>
+            <span class="meta-value">{{ task?.urgent ? '紧急' : '不紧急' }}</span>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div v-else class="detail-edit">
-      <el-form :model="form" label-width="80px">
-        <el-form-item label="任务标题">
-          <el-input v-model="form.title" placeholder="请输入任务标题" />
-        </el-form-item>
-        <el-form-item label="日期">
-          <el-date-picker
-            v-model="form.date"
-            type="date"
-            placeholder="选择日期"
-            format="YYYY年MM月DD日"
-            value-format="YYYY-MM-DD"
-            style="width: 100%"
-          />
-        </el-form-item>
-        <el-form-item label="重要性">
-          <el-switch
-            v-model="form.important"
-            active-text="重要"
-            inactive-text="不重要"
-          />
-        </el-form-item>
-        <el-form-item label="紧急度">
-          <el-switch
-            v-model="form.urgent"
-            active-text="紧急"
-            inactive-text="不紧急"
-          />
-        </el-form-item>
-        <el-form-item label="清单">
-          <el-input v-model="form.checklist" placeholder="请输入清单名称" />
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-switch
-            v-model="form.completed"
-            active-text="已完成"
-            inactive-text="待办"
-          />
-        </el-form-item>
-      </el-form>
+      <div class="edit-card">
+        <el-form :model="form" label-width="80px" class="detail-form">
+          <el-form-item label="任务标题">
+            <el-input v-model="form.title" placeholder="请输入任务标题" />
+          </el-form-item>
+          <el-form-item label="日期">
+            <el-date-picker
+              v-model="form.date"
+              type="date"
+              placeholder="选择日期"
+              format="YYYY年MM月DD日"
+              value-format="YYYY-MM-DD"
+              style="width: 100%"
+            />
+          </el-form-item>
+          <el-form-item label="重要性">
+            <el-switch
+              v-model="form.important"
+              active-text="重要"
+              inactive-text="不重要"
+            />
+          </el-form-item>
+          <el-form-item label="紧急度">
+            <el-switch
+              v-model="form.urgent"
+              active-text="紧急"
+              inactive-text="不紧急"
+            />
+          </el-form-item>
+          <el-form-item label="清单">
+            <el-input v-model="form.checklist" placeholder="请输入清单名称" />
+          </el-form-item>
+          <el-form-item label="状态">
+            <el-switch
+              v-model="form.completed"
+              active-text="已完成"
+              inactive-text="待办"
+            />
+          </el-form-item>
+        </el-form>
+      </div>
     </div>
 
     <template #footer>
@@ -158,7 +179,67 @@ function handleSave() {
 </script>
 
 <style scoped>
-.detail-view :deep(.el-descriptions__body) {
-  background-color: #fafafa;
+.detail-card {
+  border: 1px solid #eef2f7;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+  padding: 16px;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+}
+
+.detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.detail-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.detail-meta {
+  display: grid;
+  gap: 10px;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px solid #eef2f7;
+}
+
+.meta-label {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.meta-value {
+  font-size: 13px;
+  color: #0f172a;
+}
+
+.edit-card {
+  border: 1px solid #eef2f7;
+  border-radius: 14px;
+  background: #ffffff;
+  padding: 16px;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+}
+
+.detail-form :deep(.el-input__wrapper),
+.detail-form :deep(.el-date-editor) {
+  border-radius: 10px;
+}
+
+.detail-form :deep(.el-date-editor) {
+  width: 100%;
 }
 </style>

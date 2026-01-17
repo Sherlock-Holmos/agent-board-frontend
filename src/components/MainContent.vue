@@ -118,6 +118,11 @@
         </div>
       </template>
       
+      <!-- 日历视图 -->
+      <template v-else-if="currentView === 'calendar'">
+        <CalendarView :tasks="filteredTasks" />
+      </template>
+
       <!-- 普通视图 -->
       <template v-else>
         <div v-for="(tasks, dateKey) in tasksByDate" :key="dateKey" class="task-group">
@@ -179,6 +184,7 @@ import { ElMessage } from 'element-plus'
 import TaskItem from './TaskItem.vue'
 import TaskDialog from './TaskDialog.vue'
 import TaskDetailDialog from './TaskDetailDialog.vue'
+import CalendarView from './CalendarView.vue'
 import type { QuadrantType, Task } from '@/types/task'
 
 const taskStore = useTaskStore()
@@ -191,11 +197,14 @@ const dialogVisible = ref(false)
 const viewingTask = ref<Task | null>(null)
 const detailDialogVisible = ref(false)
 
-const { currentView, currentFilter, hideCompleted, tasksByDate, tasksByQuadrant, lastFetchError, lastFetchAt } = storeToRefs(taskStore)
+const { currentView, currentFilter, hideCompleted, tasksByDate, tasksByQuadrant, lastFetchError, lastFetchAt, filteredTasks } = storeToRefs(taskStore)
 
 const currentTitle = computed(() => {
   if (currentView.value === 'quadrant') {
     return '四象限'
+  }
+  if (currentView.value === 'calendar') {
+    return '日历'
   }
   const map: Record<string, string> = {
     all: '所有',
