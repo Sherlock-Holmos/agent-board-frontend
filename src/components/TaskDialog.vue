@@ -80,6 +80,15 @@ watch(() => props.modelValue, (val) => {
       checklist: props.task.checklist
     }
   }
+  if (val && !props.task) {
+    form.value = {
+      title: '',
+      date: null,
+      important: false,
+      urgent: false,
+      checklist: '收集箱'
+    }
+  }
 })
 
 watch(visible, (val) => {

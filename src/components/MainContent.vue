@@ -19,7 +19,7 @@
         </el-dropdown>
       </div>
     </div>
-    <div class="task-input-wrapper">
+    <div v-if="currentView === 'normal'" class="task-input-wrapper">
       <el-input
         v-model="newTaskTitle"
         :placeholder="inputPlaceholder"
@@ -36,6 +36,40 @@
           </div>
         </template>
       </el-input>
+    </div>
+    <div v-if="currentView === 'calendar' || currentView === 'quadrant'" class="floating-dock">
+      <el-button class="dock-toggle" circle @click="floatingOpen = !floatingOpen">
+        <el-icon><Plus /></el-icon>
+      </el-button>
+      <transition name="float-pop">
+        <div v-if="floatingOpen" class="floating-input">
+          <div class="floating-card">
+            <div class="floating-header">
+              <div class="floating-title">快速添加</div>
+              <el-button class="dock-close" circle size="small" @click="floatingOpen = false">
+                <el-icon><Close /></el-icon>
+              </el-button>
+            </div>
+            <el-input
+              v-model="newTaskTitle"
+              :placeholder="inputPlaceholder"
+              @keyup.enter="handleAddTask"
+              class="task-input"
+            >
+              <template #prefix>
+                <el-icon><Plus /></el-icon>
+              </template>
+              <template #suffix>
+                <div class="agent-switch">
+                  <span class="agent-label">Agent</span>
+                  <el-switch v-model="agentEnabled" size="small" />
+                </div>
+              </template>
+            </el-input>
+            <div class="floating-hint">回车创建任务，支持设置日期与优先级</div>
+          </div>
+        </div>
+      </transition>
     </div>
     <div class="task-list">
       <!-- 四象限视图 -->
@@ -190,7 +224,7 @@ import { ref, computed, reactive, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useTaskStore } from '@/stores/taskStore'
 import { useUserStore } from '@/stores/userStore'
-import { WarningFilled, InfoFilled } from '@element-plus/icons-vue'
+import { WarningFilled, InfoFilled, Plus, Close } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import TaskItem from './TaskItem.vue'
 import TaskDialog from './TaskDialog.vue'
@@ -203,10 +237,12 @@ const taskStore = useTaskStore()
 const userStore = useUserStore()
 const newTaskTitle = ref('')
 const agentEnabled = ref(false)
+const floatingOpen = ref(false)
 const collapsedGroups = reactive<Record<string, boolean>>({})
 const collapsedQuadrants = reactive<Record<string, boolean>>({})
 const editingTask = ref<Task | null>(null)
 const dialogVisible = ref(false)
+const isCreatingTask = ref(false)
 const viewingTask = ref<Task | null>(null)
 const detailDialogVisible = ref(false)
 
@@ -355,6 +391,7 @@ function toggleQuadrant(quadrantType: QuadrantType) {
 }
 
 function handleEditTask(task: Task) {
+  isCreatingTask.value = false
   editingTask.value = task
   dialogVisible.value = true
 }
@@ -367,7 +404,25 @@ function handleViewTask(task: Task) {
 function handleSaveTask(updates: Partial<Task>) {
   if (editingTask.value) {
     taskStore.updateTask(editingTask.value.id, updates)
+    return
   }
+  if (isCreatingTask.value) {
+    taskStore.addTask({
+      title: updates.title?.trim() || '未命名任务',
+      completed: updates.completed ?? false,
+      date: updates.date ?? null,
+      checklist: updates.checklist || '收集箱',
+      important: updates.important ?? false,
+      urgent: updates.urgent ?? false
+    })
+    isCreatingTask.value = false
+  }
+}
+
+function handleCreateTask() {
+  editingTask.value = null
+  isCreatingTask.value = true
+  dialogVisible.value = true
 }
 
 function handleSaveDetail(updates: Partial<Task>) {
@@ -503,10 +558,85 @@ async function handleToggleTask(id: string, completed: boolean) {
   color: #94a3b8;
 }
 
+.floating-dock {
+  position: absolute;
+  right: 18px;
+  bottom: 22px;
+  z-index: 6;
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.dock-toggle {
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  background: #3b82f6;
+  color: #fff;
+  border: none;
+  box-shadow: 0 16px 32px rgba(59, 130, 246, 0.28);
+}
+
+.dock-toggle:hover {
+  transform: translate3d(0, -2px, 0);
+}
+
+.floating-input {
+  max-width: 360px;
+  width: 320px;
+}
+
+.floating-card {
+  border-radius: 16px;
+  padding: 14px 14px 12px;
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  box-shadow: 0 24px 40px rgba(15, 23, 42, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.floating-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dock-close {
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+}
+
+.floating-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--app-text);
+}
+
+.floating-hint {
+  font-size: 11px;
+  color: var(--app-muted);
+}
+
+.float-pop-enter-active,
+.float-pop-leave-active {
+  transition: all var(--motion-normal) var(--motion-ease);
+}
+
+.float-pop-enter-from,
+.float-pop-leave-to {
+  opacity: 0;
+  transform: translate3d(0, 10px, 0) scale(0.98);
+}
+
 .task-list {
   flex: 1;
   overflow-y: auto;
   padding: 16px 24px;
+  scrollbar-gutter: stable both-edges;
 }
 
 /* 普通视图样式 */
@@ -668,4 +798,5 @@ async function handleToggleTask(id: string, completed: boolean) {
 .watermark-item {
   font-size: 32px;
 }
+
 </style>
