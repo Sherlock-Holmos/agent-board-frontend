@@ -22,12 +22,18 @@
     <div class="task-input-wrapper">
       <el-input
         v-model="newTaskTitle"
-        :placeholder="`+ 添加任务至'${currentChecklist}'`"
+        :placeholder="inputPlaceholder"
         @keyup.enter="handleAddTask"
         class="task-input"
       >
         <template #prefix>
           <el-icon><Plus /></el-icon>
+        </template>
+        <template #suffix>
+          <div class="agent-switch">
+            <span class="agent-label">Agent</span>
+            <el-switch v-model="agentEnabled" size="small" />
+          </div>
         </template>
       </el-input>
     </div>
@@ -196,6 +202,7 @@ import type { QuadrantType, Task } from '@/types/task'
 const taskStore = useTaskStore()
 const userStore = useUserStore()
 const newTaskTitle = ref('')
+const agentEnabled = ref(false)
 const collapsedGroups = reactive<Record<string, boolean>>({})
 const collapsedQuadrants = reactive<Record<string, boolean>>({})
 const editingTask = ref<Task | null>(null)
@@ -227,6 +234,13 @@ const currentTitle = computed(() => {
 
 const currentChecklist = computed(() => {
   return '收集箱'
+})
+
+const inputPlaceholder = computed(() => {
+  if (agentEnabled.value) {
+    return '告诉 Agent 你的需求，让它生成待办内容'
+  }
+  return '输入任务，回车创建'
 })
 
 watch(
@@ -472,6 +486,21 @@ async function handleToggleTask(id: string, completed: boolean) {
 .task-input :deep(.el-input__prefix) {
   color: #94a3b8;
   font-size: 16px;
+}
+
+.task-input :deep(.el-input__suffix) {
+  margin-left: 8px;
+}
+
+.agent-switch {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.agent-label {
+  font-size: 12px;
+  color: #94a3b8;
 }
 
 .task-list {

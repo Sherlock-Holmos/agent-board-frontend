@@ -121,6 +121,17 @@
               </el-form>
             </template>
           </div>
+
+          <div class="account-actions">
+            <div class="account-actions-info">
+              <div class="account-actions-title">安全操作</div>
+              <div class="account-actions-sub">登出将清除本地登录信息，注销将移除账号数据。</div>
+            </div>
+            <div class="account-actions-buttons">
+              <el-button class="logout-btn" @click="handleLogout">登出</el-button>
+              <el-button type="danger" class="danger-btn" @click="handleDeleteAccount">注销账号</el-button>
+            </div>
+          </div>
         </div>
 
         <div v-else-if="activeTab === 'appearance'" class="section-block">
@@ -180,8 +191,9 @@ import { computed, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useUserStore } from '@/stores/userStore'
 import { useSettingsStore } from '@/stores/settingsStore'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { helpSections } from '@/help/guideContent'
+import { useRouter } from 'vue-router'
 import {
   User,
   Grid,
@@ -207,6 +219,7 @@ const emit = defineEmits<{
 const userStore = useUserStore()
 const settingsStore = useSettingsStore()
 const { theme } = storeToRefs(settingsStore)
+const router = useRouter()
 
 const aboutSection = computed(() => helpSections.find(section => section.key === 'about'))
 
@@ -319,6 +332,39 @@ function handleSave() {
       const message = err instanceof Error ? err.message : '保存失败'
       ElMessage.error(message)
     })
+}
+
+async function handleLogout() {
+  try {
+    await ElMessageBox.confirm('确定要登出吗？', '提示', {
+      type: 'warning',
+      confirmButtonText: '登出',
+      cancelButtonText: '取消'
+    })
+    userStore.logout()
+    visible.value = false
+    router.push('/login')
+  } catch {
+    // 用户取消
+  }
+}
+
+async function handleDeleteAccount() {
+  try {
+    await ElMessageBox.confirm('确定要注销吗？该操作会清除账号数据并退出登录。', '提示', {
+      type: 'warning',
+      confirmButtonText: '注销',
+      cancelButtonText: '取消'
+    })
+    await userStore.deleteAccount()
+    ElMessage.success('已注销')
+    visible.value = false
+    router.push('/login')
+  } catch (err: unknown) {
+    if (err instanceof Error && err.message) {
+      ElMessage.error(err.message)
+    }
+  }
 }
 </script>
 
@@ -442,6 +488,49 @@ function handleSave() {
   padding: 8px 2px;
   font-size: 13px;
   color: var(--app-text);
+}
+
+.account-actions {
+  margin-top: 4px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  background: linear-gradient(180deg, rgba(255, 237, 213, 0.6), rgba(255, 255, 255, 0));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.account-actions-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.account-actions-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--app-text);
+}
+
+.account-actions-sub {
+  font-size: 12px;
+  color: var(--app-muted);
+}
+
+.account-actions-buttons {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logout-btn {
+  border-radius: 10px;
+}
+
+.danger-btn {
+  border-radius: 10px;
 }
 
 .about-header {
