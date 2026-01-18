@@ -9,21 +9,54 @@
       <div class="settings-nav">
         <div class="nav-title">设置</div>
         <div class="nav-group">
-          <button class="nav-item" :class="{ active: activeTab === 'account' }" @click="activeTab = 'account'">账号与安全</button>
+          <button class="nav-item" :class="{ active: activeTab === 'account' }" @click="activeTab = 'account'">
+            <el-icon class="nav-icon"><User /></el-icon>
+            账号与安全
+          </button>
         </div>
         <div class="nav-group">
-          <button class="nav-item" :class="{ active: activeTab === 'modules' }" @click="activeTab = 'modules'">功能模块</button>
-          <button class="nav-item" :class="{ active: activeTab === 'smart' }" @click="activeTab = 'smart'">智能清单</button>
-          <button class="nav-item" :class="{ active: activeTab === 'notify' }" @click="activeTab = 'notify'">提醒与通知</button>
-          <button class="nav-item" :class="{ active: activeTab === 'datetime' }" @click="activeTab = 'datetime'">日期与时间</button>
-          <button class="nav-item" :class="{ active: activeTab === 'appearance' }" @click="activeTab = 'appearance'">外观</button>
-          <button class="nav-item" :class="{ active: activeTab === 'more' }" @click="activeTab = 'more'">更多设置</button>
+          <button class="nav-item" :class="{ active: activeTab === 'modules' }" @click="activeTab = 'modules'">
+            <el-icon class="nav-icon"><Grid /></el-icon>
+            功能模块
+          </button>
+          <button class="nav-item" :class="{ active: activeTab === 'smart' }" @click="activeTab = 'smart'">
+            <el-icon class="nav-icon"><MagicStick /></el-icon>
+            智能清单
+          </button>
+          <button class="nav-item" :class="{ active: activeTab === 'notify' }" @click="activeTab = 'notify'">
+            <el-icon class="nav-icon"><Bell /></el-icon>
+            提醒与通知
+          </button>
+          <button class="nav-item" :class="{ active: activeTab === 'datetime' }" @click="activeTab = 'datetime'">
+            <el-icon class="nav-icon"><Calendar /></el-icon>
+            日期与时间
+          </button>
+          <button class="nav-item" :class="{ active: activeTab === 'appearance' }" @click="activeTab = 'appearance'">
+            <el-icon class="nav-icon"><Brush /></el-icon>
+            外观
+          </button>
+          <button class="nav-item" :class="{ active: activeTab === 'more' }" @click="activeTab = 'more'">
+            <el-icon class="nav-icon"><MoreFilled /></el-icon>
+            更多设置
+          </button>
         </div>
         <div class="nav-group">
-          <button class="nav-item" :class="{ active: activeTab === 'import' }" @click="activeTab = 'import'">关联与导入</button>
-          <button class="nav-item" :class="{ active: activeTab === 'collab' }" @click="activeTab = 'collab'">共享协作</button>
-          <button class="nav-item" :class="{ active: activeTab === 'shortcut' }" @click="activeTab = 'shortcut'">快捷键</button>
-          <button class="nav-item" :class="{ active: activeTab === 'about' }" @click="activeTab = 'about'">关于</button>
+          <button class="nav-item" :class="{ active: activeTab === 'import' }" @click="activeTab = 'import'">
+            <el-icon class="nav-icon"><Link /></el-icon>
+            关联与导入
+          </button>
+          <button class="nav-item" :class="{ active: activeTab === 'collab' }" @click="activeTab = 'collab'">
+            <el-icon class="nav-icon"><Share /></el-icon>
+            共享协作
+          </button>
+          <button class="nav-item" :class="{ active: activeTab === 'shortcut' }" @click="activeTab = 'shortcut'">
+            <el-icon class="nav-icon"><Pointer /></el-icon>
+            快捷键
+          </button>
+          <button class="nav-item" :class="{ active: activeTab === 'about' }" @click="activeTab = 'about'">
+            <el-icon class="nav-icon"><InfoFilled /></el-icon>
+            关于
+          </button>
         </div>
       </div>
 
@@ -110,6 +143,22 @@
           </div>
         </div>
 
+        <div v-else-if="activeTab === 'about'" class="section-block">
+          <div class="about-header">
+            <div class="about-title">{{ aboutSection?.title || '关于' }}</div>
+            <div class="about-intro">{{ aboutSection?.intro }}</div>
+          </div>
+
+          <div v-for="block in aboutSection?.blocks" :key="block.title" class="about-block">
+            <div class="about-block-title">{{ block.title }}</div>
+            <ul class="about-list">
+              <li v-for="item in block.items" :key="item">{{ item }}</li>
+            </ul>
+          </div>
+
+          <div v-if="aboutSection?.note" class="about-note">{{ aboutSection.note }}</div>
+        </div>
+
         <div v-else class="section-block">
           <div class="section">
             <div class="section-head">
@@ -132,6 +181,20 @@ import { storeToRefs } from 'pinia'
 import { useUserStore } from '@/stores/userStore'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { ElMessage } from 'element-plus'
+import { helpSections } from '@/help/guideContent'
+import {
+  User,
+  Grid,
+  MagicStick,
+  Bell,
+  Calendar,
+  Brush,
+  MoreFilled,
+  Link,
+  Share,
+  Pointer,
+  InfoFilled
+} from '@element-plus/icons-vue'
 
 const props = defineProps<{
   modelValue: boolean
@@ -144,6 +207,8 @@ const emit = defineEmits<{
 const userStore = useUserStore()
 const settingsStore = useSettingsStore()
 const { theme } = storeToRefs(settingsStore)
+
+const aboutSection = computed(() => helpSections.find(section => section.key === 'about'))
 
 const visible = ref(false)
 
@@ -297,6 +362,18 @@ function handleSave() {
   background: transparent;
   border: none;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-icon {
+  font-size: 14px;
+  color: #94a3b8;
+}
+
+.nav-item.active .nav-icon {
+  color: #409eff;
 }
 
 .nav-item.active {
@@ -365,6 +442,58 @@ function handleSave() {
   padding: 8px 2px;
   font-size: 13px;
   color: var(--app-text);
+}
+
+.about-header {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(59, 130, 246, 0.08), rgba(59, 130, 246, 0.02));
+  border: 1px solid rgba(59, 130, 246, 0.16);
+}
+
+.about-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--app-text);
+  margin-bottom: 6px;
+}
+
+.about-intro {
+  font-size: 13px;
+  color: var(--app-muted);
+}
+
+.about-block {
+  border: 1px solid var(--app-border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: var(--app-surface);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+}
+
+.about-block-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--app-text);
+  margin-bottom: 6px;
+}
+
+.about-list {
+  margin: 0;
+  padding-left: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--app-muted);
+  font-size: 13px;
+}
+
+.about-note {
+  font-size: 12px;
+  color: var(--app-muted);
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px dashed var(--app-border);
 }
 
 .edit-form :deep(.el-input__wrapper) {

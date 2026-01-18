@@ -282,6 +282,13 @@ export const helpSections: HelpSection[] = [
           '任务列表、四象限、日历、番茄专注',
           '通知中心、智能助手、主题切换'
         ]
+      },
+      {
+        title: '作者信息',
+        items: [
+          '作者：Holmes',
+          '博客：blog.jokersh.site'
+        ]
       }
     ]
   }

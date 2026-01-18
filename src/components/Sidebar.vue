@@ -80,7 +80,7 @@
       </div>
     </div>
     <div class="nav-content">
-      <div v-if="currentView !== 'quadrant'" class="nav-list">
+      <div v-if="currentView !== 'quadrant' && currentView !== 'calendar'" class="nav-list">
         <div 
           v-for="item in navItems" 
           :key="item.key"
@@ -96,7 +96,7 @@
           <el-icon v-if="currentFilter === item.key" class="check-icon"><Check /></el-icon>
         </div>
       </div>
-      <div v-if="currentView !== 'quadrant'" class="info-sections">
+      <div v-if="currentView !== 'quadrant' && currentView !== 'calendar'" class="info-sections">
         <div class="info-section">
           <h4>清单</h4>
           <p>用清单来分类收集、组织和管理你的任务和笔记</p>
@@ -110,7 +110,7 @@
           <p>以标签的维度展示不同清单的任务。在添加任务时输入"#"可快速选择标签</p>
         </div>
       </div>
-      <div v-if="currentView !== 'quadrant'" class="bottom-actions">
+      <div v-if="currentView !== 'quadrant' && currentView !== 'calendar'" class="bottom-actions">
         <div class="action-item">
           <el-icon><Checked /></el-icon>
           <span>已完成</span>
