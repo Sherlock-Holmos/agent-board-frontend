@@ -9,65 +9,116 @@
       <div class="settings-nav">
         <div class="nav-title">设置</div>
         <div class="nav-group">
-          <div class="nav-item active">账号与安全</div>
-          <div class="nav-item">高级会员</div>
+          <button class="nav-item" :class="{ active: activeTab === 'account' }" @click="activeTab = 'account'">账号与安全</button>
         </div>
         <div class="nav-group">
-          <div class="nav-item">功能模块</div>
-          <div class="nav-item">智能清单</div>
-          <div class="nav-item">提醒与通知</div>
-          <div class="nav-item">日期与时间</div>
-          <div class="nav-item">外观</div>
-          <div class="nav-item">更多设置</div>
+          <button class="nav-item" :class="{ active: activeTab === 'modules' }" @click="activeTab = 'modules'">功能模块</button>
+          <button class="nav-item" :class="{ active: activeTab === 'smart' }" @click="activeTab = 'smart'">智能清单</button>
+          <button class="nav-item" :class="{ active: activeTab === 'notify' }" @click="activeTab = 'notify'">提醒与通知</button>
+          <button class="nav-item" :class="{ active: activeTab === 'datetime' }" @click="activeTab = 'datetime'">日期与时间</button>
+          <button class="nav-item" :class="{ active: activeTab === 'appearance' }" @click="activeTab = 'appearance'">外观</button>
+          <button class="nav-item" :class="{ active: activeTab === 'more' }" @click="activeTab = 'more'">更多设置</button>
         </div>
         <div class="nav-group">
-          <div class="nav-item">关联与导入</div>
-          <div class="nav-item">共享协作</div>
-          <div class="nav-item">快捷键</div>
-          <div class="nav-item">关于</div>
+          <button class="nav-item" :class="{ active: activeTab === 'import' }" @click="activeTab = 'import'">关联与导入</button>
+          <button class="nav-item" :class="{ active: activeTab === 'collab' }" @click="activeTab = 'collab'">共享协作</button>
+          <button class="nav-item" :class="{ active: activeTab === 'shortcut' }" @click="activeTab = 'shortcut'">快捷键</button>
+          <button class="nav-item" :class="{ active: activeTab === 'about' }" @click="activeTab = 'about'">关于</button>
         </div>
       </div>
 
       <div class="settings-content">
-        <div class="profile">
+        <div v-if="activeTab === 'account'" class="section-block">
+          <div class="profile">
           <el-avatar :size="64" class="profile-avatar">
             {{ (userName || 'U').slice(0, 1).toUpperCase() }}
           </el-avatar>
           <div class="profile-name">{{ userName || '未设置用户名' }}</div>
-          <div class="profile-sub">查看会员特权</div>
+          </div>
+
+          <div class="section">
+            <div class="section-head">
+              <span>用户信息</span>
+              <el-button v-if="!isEditing" type="primary" link @click="isEditing = true">编辑</el-button>
+            </div>
+            <template v-if="!isEditing">
+              <div class="section-row">
+                <span>用户名</span>
+                <span class="muted">{{ userStore.user?.name || '-' }}</span>
+              </div>
+              <div class="section-row">
+                <span>邮箱</span>
+                <span class="muted">{{ userStore.user?.email || '-' }}</span>
+              </div>
+              <div class="section-row">
+                <span>手机号</span>
+                <span class="muted">{{ maskedPhone }}</span>
+              </div>
+              <div class="section-row">
+                <span>密码</span>
+                <span class="muted">••••••••</span>
+              </div>
+              <div class="section-row">
+                <span>创建时间</span>
+                <span class="muted">{{ formattedCreateTime }}</span>
+              </div>
+            </template>
+            <template v-else>
+              <el-form :model="form" label-width="80px" class="edit-form">
+                <el-form-item label="用户名">
+                  <el-input v-model="form.name" placeholder="请输入用户名" />
+                </el-form-item>
+                <el-form-item label="邮箱">
+                  <el-input v-model="form.email" placeholder="请输入邮箱" />
+                </el-form-item>
+                <el-form-item label="手机号">
+                  <el-input v-model="form.phone" placeholder="请输入手机号" />
+                </el-form-item>
+                <el-divider content-position="left">修改密码</el-divider>
+                <el-form-item label="新密码">
+                  <el-input v-model="form.newPassword" type="password" show-password placeholder="不修改可留空" />
+                </el-form-item>
+                <el-form-item label="确认">
+                  <el-input v-model="form.confirmPassword" type="password" show-password placeholder="再次输入新密码" />
+                </el-form-item>
+                <div class="edit-actions">
+                  <el-button @click="handleCancelEdit">取消</el-button>
+                  <el-button type="primary" @click="handleSave">保存</el-button>
+                </div>
+              </el-form>
+            </template>
+          </div>
         </div>
 
-        <div class="section">
-          <div class="section-row">
-            <span>邮箱</span>
-            <el-button type="primary" link>设置邮箱</el-button>
-          </div>
-          <div class="section-row">
-            <span>手机号</span>
-            <span class="muted">{{ maskedPhone }}</span>
-          </div>
-          <div class="section-row">
-            <span>密码</span>
-            <el-button type="primary" link>修改密码</el-button>
-          </div>
-          <div class="section-row">
-            <span>双重验证</span>
-            <el-button type="primary" link>设置</el-button>
+        <div v-else-if="activeTab === 'appearance'" class="section-block">
+          <div class="section">
+            <div class="section-head">
+              <span>外观设置</span>
+            </div>
+            <div class="section-row">
+              <span>主题</span>
+              <el-select v-model="theme" size="small" style="width: 140px">
+                <el-option label="浅色" value="light" />
+                <el-option label="深色" value="dark" />
+                <el-option label="跟随系统" value="system" />
+              </el-select>
+            </div>
+            <div class="section-row">
+              <span>紧凑模式</span>
+              <el-switch v-model="compact" />
+            </div>
           </div>
         </div>
 
-        <div class="section">
-          <div class="section-row">
-            <span>主题</span>
-            <el-select v-model="theme" size="small" style="width: 140px">
-              <el-option label="浅色" value="light" />
-              <el-option label="深色" value="dark" />
-              <el-option label="跟随系统" value="system" />
-            </el-select>
-          </div>
-          <div class="section-row">
-            <span>紧凑模式</span>
-            <el-switch v-model="compact" />
+        <div v-else class="section-block">
+          <div class="section">
+            <div class="section-head">
+              <span>功能设置</span>
+            </div>
+            <div class="section-row">
+              <span>此模块功能开发中</span>
+              <el-button type="primary" link>查看计划</el-button>
+            </div>
           </div>
         </div>
       </div>
@@ -80,6 +131,7 @@ import { computed, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useUserStore } from '@/stores/userStore'
 import { useSettingsStore } from '@/stores/settingsStore'
+import { ElMessage } from 'element-plus'
 
 const props = defineProps<{
   modelValue: boolean
@@ -101,17 +153,46 @@ const hideCompleted = ref(false)
 const reminder = ref(true)
 const reminderTime = ref('09:00')
 
+const activeTab = ref<'account' | 'modules' | 'smart' | 'notify' | 'datetime' | 'appearance' | 'more' | 'import' | 'collab' | 'shortcut' | 'about'>('account')
+
+const isEditing = ref(false)
+const form = ref({
+  name: '',
+  email: '',
+  phone: '',
+  newPassword: '',
+  confirmPassword: ''
+})
+
 const userName = computed(() => userStore.user?.name || '-')
 const maskedPhone = computed(() => {
   const phone = userStore.user?.phone || ''
   if (phone.length < 7) return phone || '-'
   return `${phone.slice(0, 3)}****${phone.slice(-4)}`
 })
+const formattedCreateTime = computed(() => {
+  const raw = userStore.user?.createdAt || userStore.user?.createTime
+  if (!raw) return '-'
+  const date = new Date(raw)
+  if (Number.isNaN(date.getTime())) return raw
+  return date.toLocaleString('zh-CN')
+})
 
 watch(
   () => props.modelValue,
   (val) => {
     visible.value = val
+    if (val) {
+      isEditing.value = false
+      userStore.fetchMe().catch(() => {})
+      form.value = {
+        name: userStore.user?.name ?? '',
+        email: userStore.user?.email ?? '',
+        phone: userStore.user?.phone ?? '',
+        newPassword: '',
+        confirmPassword: ''
+      }
+    }
   }
 )
 
@@ -121,6 +202,58 @@ watch(visible, (val) => {
 
 function handleClose() {
   visible.value = false
+}
+
+function handleCancelEdit() {
+  isEditing.value = false
+  form.value = {
+    name: userStore.user?.name ?? '',
+    email: userStore.user?.email ?? '',
+    phone: userStore.user?.phone ?? '',
+    newPassword: '',
+    confirmPassword: ''
+  }
+}
+
+function handleSave() {
+  const name = form.value.name.trim()
+  if (!name) {
+    ElMessage.warning('用户名不能为空')
+    return
+  }
+
+  const email = form.value.email.trim()
+  const phone = form.value.phone.trim()
+
+  const newPassword = form.value.newPassword
+  const confirmPassword = form.value.confirmPassword
+
+  if (newPassword || confirmPassword) {
+    if (!newPassword || !confirmPassword) {
+      ElMessage.warning('请完整填写新密码与确认密码')
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      ElMessage.warning('两次输入的新密码不一致')
+      return
+    }
+  }
+
+  userStore
+    .updateUserInfo({
+      name,
+      email,
+      phone,
+      password: newPassword ? newPassword : undefined
+    })
+    .then(() => {
+      ElMessage.success('已保存')
+      isEditing.value = false
+    })
+    .catch((err: unknown) => {
+      const message = err instanceof Error ? err.message : '保存失败'
+      ElMessage.error(message)
+    })
 }
 </script>
 
@@ -160,6 +293,10 @@ function handleClose() {
   color: var(--app-text);
   padding: 6px 10px;
   border-radius: 8px;
+  text-align: left;
+  background: transparent;
+  border: none;
+  cursor: pointer;
 }
 
 .nav-item.active {
@@ -169,6 +306,12 @@ function handleClose() {
 }
 
 .settings-content {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.section-block {
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -206,6 +349,15 @@ function handleClose() {
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
 }
 
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--app-text);
+  margin-bottom: 8px;
+}
+
 .section-row {
   display: flex;
   align-items: center;
@@ -213,6 +365,17 @@ function handleClose() {
   padding: 8px 2px;
   font-size: 13px;
   color: var(--app-text);
+}
+
+.edit-form :deep(.el-input__wrapper) {
+  border-radius: 10px;
+}
+
+.edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 6px;
 }
 
 .muted {

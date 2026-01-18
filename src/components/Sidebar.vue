@@ -2,12 +2,20 @@
   <div class="sidebar" :class="{ compact }">
     <div class="icon-bar">
       <div class="icon-group">
-        <el-avatar
-          :size="36"
-          :icon="User"
-          class="avatar-icon"
-          @click="userDialogVisible = true"
-        />
+        <el-dropdown trigger="click" @command="handleAvatarCommand">
+          <el-avatar
+            :size="36"
+            :icon="User"
+            class="avatar-icon"
+          />
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item :icon="Setting" command="settings">设置</el-dropdown-item>
+              <el-dropdown-item :icon="DataAnalysis" command="stats">统计</el-dropdown-item>
+              <el-dropdown-item :icon="SwitchButton" divided command="logout">退出登录</el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
         <el-icon 
           class="icon" 
           :size="24"
@@ -39,22 +47,15 @@
       <div class="icon-spacer"></div>
 
       <div class="icon-group">
-        <el-icon class="icon" :size="24" @click="handleRefresh"><Refresh /></el-icon>
-        <el-icon class="icon" :size="24"><Bell /></el-icon>
+        <el-icon class="icon" :size="24" @click="handleRefresh">
+          <Refresh :class="{ spinning: isRefreshing }" />
+        </el-icon>
+        <el-icon class="icon" :size="24" @click="notificationVisible = true"><Bell /></el-icon>
         <el-icon class="icon" :size="24"><QuestionFilled /></el-icon>
         <el-icon
           class="icon"
           :size="24"
-          @click="settingsDialogVisible = true"
-        >
-          <Setting />
-        </el-icon>
-      </div>
-      <div class="icon-group">
-        <el-icon
-          class="icon"
-          :size="24"
-          :class="{ active: route.path.startsWith('/agents') }"
+          :class="{ active: agentDialogVisible }"
           @click="handleAgent"
         >
           <Cpu />
@@ -104,16 +105,18 @@
       </div>
     </div>
 
-    <UserDialog v-model="userDialogVisible" />
     <SettingsDialog v-model="settingsDialogVisible" />
+    <AgentDialog v-model="agentDialogVisible" />
+    <NotificationDrawer v-model="notificationVisible" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useTaskStore } from '@/stores/taskStore'
-import UserDialog from './UserDialog.vue'
 import SettingsDialog from './SettingsDialog.vue'
+import AgentDialog from './AgentDialog.vue'
+import NotificationDrawer from './NotificationDrawer.vue'
 import { 
   User, 
   Document, 
@@ -121,19 +124,23 @@ import {
   Box,
   Cpu
 } from '@element-plus/icons-vue'
+import { Setting, DataAnalysis, SwitchButton } from '@element-plus/icons-vue'
 import type { FilterType } from '@/types/task'
 import { ElMessage } from 'element-plus'
-import { useRoute, useRouter } from 'vue-router'
+import { useRouter } from 'vue-router'
+import { useUserStore } from '@/stores/userStore'
 
 const props = defineProps<{
   compact?: boolean
 }>()
 
 const taskStore = useTaskStore()
-const userDialogVisible = ref(false)
 const settingsDialogVisible = ref(false)
+const agentDialogVisible = ref(false)
+const notificationVisible = ref(false)
+const isRefreshing = ref(false)
 const router = useRouter()
-const route = useRoute()
+const userStore = useUserStore()
 
 const currentFilter = computed(() => taskStore.currentFilter)
 const currentView = computed(() => taskStore.currentView)
@@ -200,17 +207,35 @@ function handleIconClick(view: 'normal' | 'quadrant' | 'calendar') {
 }
 
 async function handleRefresh() {
+  if (isRefreshing.value) return
+  isRefreshing.value = true
   try {
     await taskStore.fetchTodosForCurrentFilter()
-    ElMessage.success('已刷新')
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : '刷新失败'
     ElMessage.error(message)
+  } finally {
+    window.setTimeout(() => {
+      isRefreshing.value = false
+    }, 300)
   }
 }
 
 function handleAgent() {
-  router.push('/agents')
+  agentDialogVisible.value = true
+}
+
+function handleAvatarCommand(command: string) {
+  if (command === 'settings') {
+    settingsDialogVisible.value = true
+    return
+  }
+  if (command === 'logout') {
+    userStore.logout()
+    router.push('/login')
+    return
+  }
+  ElMessage.info('功能开发中')
 }
 
 </script>
@@ -286,6 +311,19 @@ function handleAgent() {
 .icon.active {
   color: #409eff;
   background-color: rgba(64, 158, 255, 0.25);
+}
+
+.spinning {
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .nav-content {
