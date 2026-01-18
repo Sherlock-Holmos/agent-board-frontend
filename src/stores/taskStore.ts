@@ -20,7 +20,7 @@ export const useTaskStore = defineStore('task', () => {
   const lastFetchAt = ref<Date | null>(null)
 
   const currentFilter = ref<FilterType>('all')
-  const currentView = ref<'normal' | 'quadrant' | 'calendar'>('normal')
+  const currentView = ref<'normal' | 'quadrant' | 'calendar' | 'pomodoro'>('normal')
   const hideCompleted = ref(false)
 
   function toDate(value?: string | Date | null) {
@@ -297,14 +297,14 @@ export const useTaskStore = defineStore('task', () => {
     void fetchTodosForCurrentFilter()
   }
 
-  function setView(view: 'normal' | 'quadrant' | 'calendar') {
+  function setView(view: 'normal' | 'quadrant' | 'calendar' | 'pomodoro') {
     currentView.value = view
     // 切换到四象限视图时，如果当前过滤器是 quadrant，改为 all
     if (view === 'quadrant' && currentFilter.value === 'quadrant') {
       currentFilter.value = 'all'
     }
 
-    if (view === 'quadrant' || view === 'calendar') {
+    if (view === 'quadrant' || view === 'calendar' || view === 'pomodoro') {
       void fetchTodosForCurrentFilter()
     }
   }

@@ -40,7 +40,14 @@
         >
           <Aim />
         </el-icon>
-        <el-icon class="icon" :size="24"><Clock /></el-icon>
+        <el-icon
+          class="icon"
+          :size="24"
+          :class="{ active: currentView === 'pomodoro' }"
+          @click="handleIconClick('pomodoro')"
+        >
+          <Clock />
+        </el-icon>
         <el-icon class="icon" :size="24"><Search /></el-icon>
       </div>
 
@@ -190,13 +197,15 @@ function handleNavClick(key: FilterType) {
   }
 }
 
-function handleIconClick(view: 'normal' | 'quadrant' | 'calendar') {
+function handleIconClick(view: 'normal' | 'quadrant' | 'calendar' | 'pomodoro') {
   if (view === 'quadrant') {
     // 先设置过滤器，再切换视图，避免 setFilter 把视图重置为 normal
     taskStore.setFilter('all') // 切换到四象限视图时，使用 all 过滤器
     taskStore.setView('quadrant')
   } else if (view === 'calendar') {
     taskStore.setView('calendar')
+  } else if (view === 'pomodoro') {
+    taskStore.setView('pomodoro')
   } else {
     taskStore.setView('normal')
     // 如果当前没有选中任何导航项，默认选中"所有"

@@ -1,6 +1,6 @@
 <template>
   <div class="app-container">
-    <Sidebar :compact="currentView === 'quadrant'" />
+    <Sidebar :compact="currentView === 'quadrant' || currentView === 'pomodoro'" />
     <MainContent />
   </div>
 </template>

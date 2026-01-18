@@ -123,6 +123,11 @@
         <CalendarView :tasks="filteredTasks" />
       </template>
 
+      <!-- 番茄钟视图 -->
+      <template v-else-if="currentView === 'pomodoro'">
+        <PomodoroView />
+      </template>
+
       <!-- 普通视图 -->
       <template v-else>
         <div v-for="(tasks, dateKey) in tasksByDate" :key="dateKey" class="task-group">
@@ -185,6 +190,7 @@ import TaskItem from './TaskItem.vue'
 import TaskDialog from './TaskDialog.vue'
 import TaskDetailDialog from './TaskDetailDialog.vue'
 import CalendarView from './CalendarView.vue'
+import PomodoroView from './PomodoroView.vue'
 import type { QuadrantType, Task } from '@/types/task'
 
 const taskStore = useTaskStore()
@@ -205,6 +211,9 @@ const currentTitle = computed(() => {
   }
   if (currentView.value === 'calendar') {
     return '日历'
+  }
+  if (currentView.value === 'pomodoro') {
+    return '番茄专注'
   }
   const map: Record<string, string> = {
     all: '所有',
