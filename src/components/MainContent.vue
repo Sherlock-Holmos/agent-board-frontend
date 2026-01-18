@@ -374,7 +374,7 @@ async function handleToggleTask(id: string, completed: boolean) {
   flex: 1;
   display: flex;
   flex-direction: column;
-  background-color: #fff;
+  background-color: var(--app-surface);
   position: relative;
   overflow: hidden;
 }

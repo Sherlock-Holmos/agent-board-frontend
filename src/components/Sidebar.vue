@@ -42,7 +42,23 @@
         <el-icon class="icon" :size="24" @click="handleRefresh"><Refresh /></el-icon>
         <el-icon class="icon" :size="24"><Bell /></el-icon>
         <el-icon class="icon" :size="24"><QuestionFilled /></el-icon>
-        <el-icon class="icon" :size="24"><Setting /></el-icon>
+        <el-icon
+          class="icon"
+          :size="24"
+          @click="settingsDialogVisible = true"
+        >
+          <Setting />
+        </el-icon>
+      </div>
+      <div class="icon-group">
+        <el-icon
+          class="icon"
+          :size="24"
+          :class="{ active: route.path.startsWith('/agents') }"
+          @click="handleAgent"
+        >
+          <Cpu />
+        </el-icon>
       </div>
     </div>
     <div class="nav-content">
@@ -89,6 +105,7 @@
     </div>
 
     <UserDialog v-model="userDialogVisible" />
+    <SettingsDialog v-model="settingsDialogVisible" />
   </div>
 </template>
 
@@ -96,14 +113,17 @@
 import { computed, ref } from 'vue'
 import { useTaskStore } from '@/stores/taskStore'
 import UserDialog from './UserDialog.vue'
+import SettingsDialog from './SettingsDialog.vue'
 import { 
   User, 
   Document, 
   Calendar, 
-  Box
+  Box,
+  Cpu
 } from '@element-plus/icons-vue'
 import type { FilterType } from '@/types/task'
 import { ElMessage } from 'element-plus'
+import { useRoute, useRouter } from 'vue-router'
 
 const props = defineProps<{
   compact?: boolean
@@ -111,6 +131,9 @@ const props = defineProps<{
 
 const taskStore = useTaskStore()
 const userDialogVisible = ref(false)
+const settingsDialogVisible = ref(false)
+const router = useRouter()
+const route = useRoute()
 
 const currentFilter = computed(() => taskStore.currentFilter)
 const currentView = computed(() => taskStore.currentView)
@@ -186,13 +209,17 @@ async function handleRefresh() {
   }
 }
 
+function handleAgent() {
+  router.push('/agents')
+}
+
 </script>
 
 <style scoped>
 .sidebar {
   display: flex;
   width: 280px;
-  background-color: #fff;
+  background-color: var(--app-surface);
   border-right: 1px solid #e0e0e0;
   overflow-y: auto;
 }
@@ -208,7 +235,7 @@ async function handleRefresh() {
 }
 
 .nav-content {
-  background-color: #f8f9fa;
+  background-color: var(--app-bg);
 }
 
 .icon-bar {
