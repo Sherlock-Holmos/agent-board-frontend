@@ -58,7 +58,17 @@
           <Refresh :class="{ spinning: isRefreshing }" />
         </el-icon>
         <el-icon class="icon" :size="24" @click="notificationVisible = true"><Bell /></el-icon>
-        <el-icon class="icon" :size="24"><QuestionFilled /></el-icon>
+        <el-dropdown trigger="click" @command="handleHelpCommand">
+          <el-icon class="icon" :size="24"><QuestionFilled /></el-icon>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item command="guide">使用指南</el-dropdown-item>
+              <el-dropdown-item command="shortcut">快捷键</el-dropdown-item>
+              <el-dropdown-item command="feedback">反馈问题</el-dropdown-item>
+              <el-dropdown-item command="about">关于</el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
         <el-icon
           class="icon"
           :size="24"
@@ -115,6 +125,7 @@
     <SettingsDialog v-model="settingsDialogVisible" />
     <AgentDialog v-model="agentDialogVisible" />
     <NotificationDrawer v-model="notificationVisible" />
+    <HelpDialog v-model="helpDialogVisible" :active-key="helpActiveKey" />
   </div>
 </template>
 
@@ -124,6 +135,7 @@ import { useTaskStore } from '@/stores/taskStore'
 import SettingsDialog from './SettingsDialog.vue'
 import AgentDialog from './AgentDialog.vue'
 import NotificationDrawer from './NotificationDrawer.vue'
+import HelpDialog from './HelpDialog.vue'
 import { 
   User, 
   Document, 
@@ -146,6 +158,8 @@ const settingsDialogVisible = ref(false)
 const agentDialogVisible = ref(false)
 const notificationVisible = ref(false)
 const isRefreshing = ref(false)
+const helpDialogVisible = ref(false)
+const helpActiveKey = ref('quickstart')
 const router = useRouter()
 const userStore = useUserStore()
 
@@ -245,6 +259,17 @@ function handleAvatarCommand(command: string) {
     return
   }
   ElMessage.info('功能开发中')
+}
+
+function handleHelpCommand(command: string) {
+  const map: Record<string, string> = {
+    guide: 'quickstart',
+    shortcut: 'shortcuts',
+    feedback: 'feedback',
+    about: 'about'
+  }
+  helpActiveKey.value = map[command] || 'quickstart'
+  helpDialogVisible.value = true
 }
 
 </script>
