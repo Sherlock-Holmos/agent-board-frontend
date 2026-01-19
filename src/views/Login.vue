@@ -55,8 +55,21 @@
             size="large"
             class="login-input"
             show-password
-            @keyup.enter="handleLogin"
           />
+        </el-form-item>
+
+        <el-form-item prop="captcha" class="captcha-item">
+          <div class="captcha-row">
+            <el-input
+              v-model="loginForm.captcha"
+              placeholder="请输入验证码"
+              size="large"
+              class="login-input captcha-input"
+            />
+            <div class="captcha-box" @click="refreshCaptcha" title="点击刷新验证码">
+              <canvas ref="captchaRef" width="120" height="40"></canvas>
+            </div>
+          </div>
         </el-form-item>
         
         <el-form-item>
@@ -101,7 +114,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { onMounted, ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { CircleCheck } from '@element-plus/icons-vue'
@@ -115,7 +128,8 @@ const loading = ref(false)
 
 const loginForm = reactive({
   account: '',
-  password: ''
+  password: '',
+  captcha: ''
 })
 
 const rules: FormRules = {
@@ -125,12 +139,74 @@ const rules: FormRules = {
   password: [
     { required: true, message: '请输入密码', trigger: 'blur' },
     { min: 6, message: '密码长度不能少于6位', trigger: 'blur' }
+  ],
+  captcha: [
+    { required: true, message: '请输入验证码', trigger: 'blur' },
+    { min: 4, max: 4, message: '验证码为4位', trigger: 'blur' }
   ]
+}
+
+const captchaRef = ref<HTMLCanvasElement | null>(null)
+const captchaValue = ref('')
+
+function randomCaptcha() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+  let text = ''
+  for (let i = 0; i < 4; i += 1) {
+    text += chars[Math.floor(Math.random() * chars.length)]
+  }
+  return text
+}
+
+function drawCaptcha(text: string) {
+  const canvas = captchaRef.value
+  if (!canvas) return
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height)
+  ctx.fillStyle = '#f8fafc'
+  ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+  for (let i = 0; i < 6; i += 1) {
+    ctx.strokeStyle = `rgba(59, 130, 246, ${Math.random() * 0.5 + 0.2})`
+    ctx.beginPath()
+    ctx.moveTo(Math.random() * canvas.width, Math.random() * canvas.height)
+    ctx.lineTo(Math.random() * canvas.width, Math.random() * canvas.height)
+    ctx.stroke()
+  }
+
+  for (let i = 0; i < text.length; i += 1) {
+    const char = text[i]
+    ctx.font = `${Math.floor(Math.random() * 6) + 22}px Arial`
+    ctx.fillStyle = `rgb(${Math.floor(Math.random() * 80 + 20)}, ${Math.floor(
+      Math.random() * 80 + 20
+    )}, ${Math.floor(Math.random() * 120 + 60)})`
+    const x = 12 + i * 24
+    const y = 28 + Math.random() * 6
+    const angle = (Math.random() * 30 - 15) * (Math.PI / 180)
+    ctx.save()
+    ctx.translate(x, y)
+    ctx.rotate(angle)
+    ctx.fillText(char, 0, 0)
+    ctx.restore()
+  }
+}
+
+function refreshCaptcha() {
+  captchaValue.value = randomCaptcha()
+  drawCaptcha(captchaValue.value)
 }
 
 function handleLogin() {
   formRef.value?.validate((valid) => {
     if (valid) {
+      if (loginForm.captcha.trim().toUpperCase() !== captchaValue.value) {
+        ElMessage.error('验证码不正确')
+        refreshCaptcha()
+        loginForm.captcha = ''
+        return
+      }
       loading.value = true
       userStore
         .loginByApi({
@@ -149,10 +225,16 @@ function handleLogin() {
         })
         .finally(() => {
           loading.value = false
+          refreshCaptcha()
+          loginForm.captcha = ''
         })
     }
   })
 }
+
+onMounted(() => {
+  refreshCaptcha()
+})
 
 function handleRegister() {
   router.push('/register')
@@ -233,7 +315,7 @@ function handleMoreLogin() {
   justify-content: center;
   padding: 48px 40px;
   width: 100%;
-  max-width: 440px;
+  max-width: 460px;
   margin: 0 auto;
   background-color: #fff;
   border-radius: 16px;
@@ -269,6 +351,40 @@ function handleMoreLogin() {
 
 .login-input {
   width: 100%;
+}
+
+.captcha-item {
+  align-items: center;
+}
+
+.captcha-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.captcha-input {
+  flex: 1;
+}
+
+.captcha-box {
+  width: 120px;
+  height: 40px;
+  margin-left: 12px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  background: #f8fafc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: box-shadow 200ms ease, transform 200ms ease;
+}
+
+.captcha-box:hover {
+  box-shadow: 0 10px 18px rgba(15, 23, 42, 0.12);
+  transform: translateY(-1px);
 }
 
 .login-input :deep(.el-input__wrapper) {

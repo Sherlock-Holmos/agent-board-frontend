@@ -87,6 +87,20 @@
           />
         </el-form-item>
 
+        <el-form-item prop="captcha" class="captcha-item">
+          <div class="captcha-row">
+            <el-input
+              v-model="registerForm.captcha"
+              placeholder="请输入验证码"
+              size="large"
+              class="register-input captcha-input"
+            />
+            <div class="captcha-box" @click="refreshCaptcha" title="点击刷新验证码">
+              <canvas ref="captchaRef" width="120" height="40"></canvas>
+            </div>
+          </div>
+        </el-form-item>
+
         <el-form-item>
           <el-button
             type="primary"
@@ -102,8 +116,16 @@
 
       <div class="register-tip">
         点击注册即表示你同意相关服务条款
+        <a href="#" class="terms-link" @click.prevent="termsVisible = true">查看条款</a>
       </div>
     </div>
+
+    <el-dialog v-model="termsVisible" title="服务条款" width="560px">
+      <pre class="terms-content">{{ termsContent }}</pre>
+      <template #footer>
+        <el-button type="primary" @click="termsVisible = false">我已了解</el-button>
+      </template>
+    </el-dialog>
 
     <!-- 底部登录提示 -->
     <div class="footer">
@@ -114,22 +136,25 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { CircleCheck } from '@element-plus/icons-vue'
 import { apiRegister } from '@/api/auth'
+import termsContent from '@/help/terms.md?raw'
 
 const router = useRouter()
 const formRef = ref<FormInstance>()
 const loading = ref(false)
+const termsVisible = ref(false)
 
 const registerForm = reactive({
   name: '',
   email: '',
   phone: '',
   password: '',
-  confirmPassword: ''
+  confirmPassword: '',
+  captcha: ''
 })
 
 const rules: FormRules = {
@@ -158,12 +183,74 @@ const rules: FormRules = {
       },
       trigger: 'blur'
     }
+  ],
+  captcha: [
+    { required: true, message: '请输入验证码', trigger: 'blur' },
+    { min: 4, max: 4, message: '验证码为4位', trigger: 'blur' }
   ]
+}
+
+const captchaRef = ref<HTMLCanvasElement | null>(null)
+const captchaValue = ref('')
+
+function randomCaptcha() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+  let text = ''
+  for (let i = 0; i < 4; i += 1) {
+    text += chars[Math.floor(Math.random() * chars.length)]
+  }
+  return text
+}
+
+function drawCaptcha(text: string) {
+  const canvas = captchaRef.value
+  if (!canvas) return
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height)
+  ctx.fillStyle = '#f8fafc'
+  ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+  for (let i = 0; i < 6; i += 1) {
+    ctx.strokeStyle = `rgba(59, 130, 246, ${Math.random() * 0.5 + 0.2})`
+    ctx.beginPath()
+    ctx.moveTo(Math.random() * canvas.width, Math.random() * canvas.height)
+    ctx.lineTo(Math.random() * canvas.width, Math.random() * canvas.height)
+    ctx.stroke()
+  }
+
+  for (let i = 0; i < text.length; i += 1) {
+    const char = text[i]
+    ctx.font = `${Math.floor(Math.random() * 6) + 22}px Arial`
+    ctx.fillStyle = `rgb(${Math.floor(Math.random() * 80 + 20)}, ${Math.floor(
+      Math.random() * 80 + 20
+    )}, ${Math.floor(Math.random() * 120 + 60)})`
+    const x = 12 + i * 24
+    const y = 28 + Math.random() * 6
+    const angle = (Math.random() * 30 - 15) * (Math.PI / 180)
+    ctx.save()
+    ctx.translate(x, y)
+    ctx.rotate(angle)
+    ctx.fillText(char, 0, 0)
+    ctx.restore()
+  }
+}
+
+function refreshCaptcha() {
+  captchaValue.value = randomCaptcha()
+  drawCaptcha(captchaValue.value)
 }
 
 function handleRegister() {
   formRef.value?.validate(async (valid) => {
     if (!valid) return
+    if (registerForm.captcha.trim().toUpperCase() !== captchaValue.value) {
+      ElMessage.error('验证码不正确')
+      refreshCaptcha()
+      registerForm.captcha = ''
+      return
+    }
     loading.value = true
     try {
       const resp = await apiRegister({
@@ -184,9 +271,15 @@ function handleRegister() {
       ElMessage.error(message)
     } finally {
       loading.value = false
+      refreshCaptcha()
+      registerForm.captcha = ''
     }
   })
 }
+
+onMounted(() => {
+  refreshCaptcha()
+})
 
 function goLogin() {
   router.push('/login')
@@ -293,6 +386,40 @@ function goLogin() {
   width: 100%;
 }
 
+.captcha-item {
+  align-items: center;
+}
+
+.captcha-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.captcha-input {
+  flex: 1;
+}
+
+.captcha-box {
+  width: 120px;
+  height: 40px;
+  margin-left: 0;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  background: #f8fafc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: box-shadow 200ms ease, transform 200ms ease;
+}
+
+.captcha-box:hover {
+  box-shadow: 0 10px 18px rgba(15, 23, 42, 0.12);
+  transform: translateY(-1px);
+}
+
 .register-input :deep(.el-input__wrapper) {
   border-radius: 12px;
   border: 1px solid #e5e7eb;
@@ -335,6 +462,29 @@ function goLogin() {
   font-size: 12px;
   color: #6b7280;
   text-align: center;
+}
+
+.terms-link {
+  margin-left: 6px;
+  color: #409eff;
+  text-decoration: none;
+}
+
+.terms-link:hover {
+  text-decoration: underline;
+}
+
+.terms-content {
+  color: #374151;
+  line-height: 1.7;
+  font-size: 14px;
+  white-space: pre-wrap;
+  font-family: inherit;
+}
+
+.terms-content ol {
+  padding-left: 18px;
+  margin: 12px 0;
 }
 
 /* 底部登录提示 */
