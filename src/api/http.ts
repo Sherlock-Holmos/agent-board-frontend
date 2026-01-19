@@ -11,20 +11,21 @@ function resolveApiBaseUrl(raw?: string) {
 
 export const http = axios.create({
   baseURL: resolveApiBaseUrl(API_BASE_URL),
-  timeout: 45000
+  timeout: 60000
 })
 
 http.interceptors.request.use((config) => {
   const url = config.url || ''
   const isAuthEndpoint = url.startsWith('/user/auth/login') || url.startsWith('/user/auth/register')
   const isTodoEndpoint = url.startsWith('/todos') || url.startsWith('/api/todos')
+  const isAgentEndpoint = url.startsWith('/agent') || url.startsWith('/api/agent')
   const token = localStorage.getItem('token')
   if (token && !isAuthEndpoint) {
     config.headers = config.headers ?? {}
     config.headers.Authorization = `Bearer ${token}`
   }
 
-  if (isTodoEndpoint) {
+  if (isTodoEndpoint || isAgentEndpoint) {
     try {
       const userRaw = localStorage.getItem('user')
       const user = userRaw ? JSON.parse(userRaw) : null

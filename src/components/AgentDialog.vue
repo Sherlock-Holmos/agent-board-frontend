@@ -20,7 +20,7 @@
             <span>对话面板</span>
             <el-tag type="info" effect="light">实时协作</el-tag>
           </div>
-          <div class="panel-body chat-body">
+          <div ref="chatBodyRef" class="panel-body chat-body">
             <div
               v-for="(msg, index) in messages"
               :key="index"
@@ -80,25 +80,32 @@
             <el-tag type="warning" effect="light">建议参考</el-tag>
           </div>
           <div class="panel-body">
-            <div class="persona-item">
-              <span>偏好时间</span>
-              <strong>上午专注 / 下午沟通</strong>
+            <div v-if="profileFeatures.length === 0 && !profileSummaryLine" class="persona-empty">
+              暂无画像信息，请先与 Agent 对话。
             </div>
-            <div class="persona-item">
-              <span>任务类型</span>
-              <strong>计划型 + 低碎片</strong>
+            <div v-else class="persona-section">
+              <div class="persona-section-title">特征画像</div>
+              <div class="persona-list">
+                <span
+                  v-for="(line, idx) in profileFeatures"
+                  :key="idx"
+                  class="persona-bubble"
+                  :style="bubbleStyle(idx)"
+                >
+                  {{ line }}
+                </span>
+              </div>
             </div>
-            <div class="persona-item">
-              <span>安排策略</span>
-              <strong>先难后易，留缓冲</strong>
+            <div v-if="profileSummaryLine" class="persona-section">
+              <div class="persona-section-title">一句话总结</div>
+              <p class="persona-summary">{{ profileSummaryLine }}</p>
             </div>
-            <div class="persona-item">
-              <span>Agent 要求</span>
-              <strong>提醒优先级 & 自动拆解</strong>
+            <p class="persona-tip">画像由近期对话推断，仅供安排参考。</p>
+            <div class="persona-actions">
+              <el-button size="small" type="danger" plain @click="handleClearProfile">
+                清空画像
+              </el-button>
             </div>
-            <p class="persona-tip">
-              画像由近期任务与操作习惯推断，仅供安排参考。
-            </p>
           </div>
         </div>
       </div>
@@ -107,9 +114,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useTaskStore } from '@/stores/taskStore'
 import { apiExecuteAgent } from '@/api/agent'
+import { clearAgentProfile, loadAgentProfile, saveAgentProfile } from '@/utils/agentProfile'
 
 const props = defineProps<{
   modelValue: boolean
@@ -130,6 +138,8 @@ const prompt = ref('')
 const messages = ref<Array<{ role: 'user' | 'agent'; text: string }>>([])
 const sending = ref(false)
 const storageKey = 'agent_dialog_messages'
+const profileSummary = ref('')
+const chatBodyRef = ref<HTMLDivElement | null>(null)
 
 onMounted(() => {
   try {
@@ -138,12 +148,18 @@ onMounted(() => {
   } catch {
     // ignore parse errors
   }
+  profileSummary.value = loadAgentProfile()
 })
 
 watch(
   messages,
   (val) => {
     localStorage.setItem(storageKey, JSON.stringify(val))
+    nextTick(() => {
+      if (chatBodyRef.value) {
+        chatBodyRef.value.scrollTop = chatBodyRef.value.scrollHeight
+      }
+    })
   },
   { deep: true }
 )
@@ -158,6 +174,69 @@ const recentItems = computed(() => {
       dateLabel: task.date ? new Date(task.date).toLocaleDateString('zh-CN') : '无日期'
     }))
 })
+
+const profileLines = computed(() => {
+  const summary = profileSummary.value.trim()
+  if (!summary) return []
+  return summary.split(/\r?\n/).map(item => item.trim()).filter(Boolean)
+})
+
+const profileSummaryLine = computed(() => {
+  if (profileLines.value.length === 0) return ''
+  const last = profileLines.value[profileLines.value.length - 1]
+  if (last.startsWith('总结：') || last.startsWith('总结:')) {
+    return last.replace(/^总结[:：]\s*/, '')
+  }
+  return ''
+})
+
+const profileFeatures = computed(() => {
+  if (profileLines.value.length === 0) return []
+  const lines = profileSummaryLine.value
+    ? profileLines.value.slice(0, -1)
+    : profileLines.value
+  const tokens = lines
+    .join(' ')
+    .split(/[，,、;；\s]+/)
+    .map(item => item.trim())
+    .filter(Boolean)
+  if (tokens.length <= 1 && tokens[0] && tokens[0].length >= 8) {
+    return chunkText(tokens[0], 4)
+  }
+  return tokens
+})
+
+function chunkText(text: string, size: number) {
+  const result: string[] = []
+  let buffer = ''
+  for (const char of text) {
+    buffer += char
+    if (buffer.length >= size) {
+      result.push(buffer)
+      buffer = ''
+    }
+  }
+  if (buffer) result.push(buffer)
+  return result
+}
+
+const bubblePalette = [
+  { bg: '#e0f2fe', color: '#075985' },
+  { bg: '#fce7f3', color: '#9d174d' },
+  { bg: '#ecfccb', color: '#365314' },
+  { bg: '#ede9fe', color: '#5b21b6' },
+  { bg: '#fef3c7', color: '#92400e' },
+  { bg: '#dcfce7', color: '#166534' },
+  { bg: '#ffe4e6', color: '#9f1239' }
+]
+
+const bubbleStyle = (index: number) => {
+  const palette = bubblePalette[index % bubblePalette.length]
+  return {
+    backgroundColor: palette.bg,
+    color: palette.color
+  }
+}
 
 watch(
   () => props.modelValue,
@@ -181,9 +260,13 @@ async function handleSend() {
   prompt.value = ''
   sending.value = true
   try {
-    const res = await apiExecuteAgent(text)
+    const res = await apiExecuteAgent(text, profileSummary.value)
     if (res.status === 'success' && res.response) {
       messages.value.push({ role: 'agent', text: res.response })
+      if (res.profile) {
+        profileSummary.value = res.profile
+        saveAgentProfile(res.profile)
+      }
     } else {
       messages.value.push({ role: 'agent', text: res.error || 'Agent 调用失败' })
     }
@@ -198,6 +281,11 @@ async function handleSend() {
 function handleClear() {
   messages.value = []
   localStorage.removeItem(storageKey)
+}
+
+function handleClearProfile() {
+  profileSummary.value = ''
+  clearAgentProfile()
 }
 </script>
 
@@ -417,6 +505,78 @@ function handleClear() {
     grid-template-columns: 1fr;
     height: auto;
   }
+
+.persona-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 4px 2px;
+}
+
+.persona-bubble {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  line-height: 1.2;
+  font-weight: 600;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.12);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.persona-bubble:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 26px rgba(15, 23, 42, 0.18);
+}
+
+.persona-empty {
+  padding: 12px;
+  border-radius: 12px;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.persona-actions {
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.persona-summary {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: linear-gradient(120deg, #f8fafc, #eef2ff);
+  color: #0f172a;
+  font-size: 13px;
+  line-height: 1.4;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+}
+
+.persona-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+}
+
+.persona-section + .persona-section {
+  margin-top: 12px;
+}
+
+.persona-section-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #475569;
+  letter-spacing: 0.08em;
+}
 
   .agent-nav {
     border-right: none;

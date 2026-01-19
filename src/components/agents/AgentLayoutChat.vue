@@ -5,7 +5,7 @@
         <div class="title">Agent 对话</div>
         <el-tag type="info" effect="light">多轮推理</el-tag>
       </div>
-      <div class="panel-body">
+      <div ref="chatBodyRef" class="panel-body">
         <div class="bubble agent code">
           <pre><code>// 路由2：将访问 /api/user/** 的请求，负载均衡到另一个服务（假设您以后有user-service）
 .route("user_route", r -&gt; r
@@ -56,13 +56,16 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
+import { nextTick, onMounted, ref, watch } from 'vue'
 import { apiExecuteAgent } from '@/api/agent'
+import { loadAgentProfile, saveAgentProfile } from '@/utils/agentProfile'
 
 const prompt = ref('')
 const messages = ref<Array<{ role: 'user' | 'agent'; text: string }>>([])
 const sending = ref(false)
 const storageKey = 'agent_chat_messages'
+const profileSummary = ref('')
+const chatBodyRef = ref<HTMLDivElement | null>(null)
 
 onMounted(() => {
   try {
@@ -71,12 +74,18 @@ onMounted(() => {
   } catch {
     // ignore parse errors
   }
+  profileSummary.value = loadAgentProfile()
 })
 
 watch(
   messages,
   (val) => {
     localStorage.setItem(storageKey, JSON.stringify(val))
+    nextTick(() => {
+      if (chatBodyRef.value) {
+        chatBodyRef.value.scrollTop = chatBodyRef.value.scrollHeight
+      }
+    })
   },
   { deep: true }
 )
@@ -88,9 +97,13 @@ const handleSend = async () => {
   prompt.value = ''
   sending.value = true
   try {
-    const res = await apiExecuteAgent(text)
+    const res = await apiExecuteAgent(text, profileSummary.value)
     if (res.status === 'success' && res.response) {
       messages.value.push({ role: 'agent', text: res.response })
+      if (res.profile) {
+        profileSummary.value = res.profile
+        saveAgentProfile(res.profile)
+      }
     } else {
       messages.value.push({ role: 'agent', text: res.error || 'Agent 调用失败' })
     }
