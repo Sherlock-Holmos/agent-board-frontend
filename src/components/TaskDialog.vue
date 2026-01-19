@@ -40,6 +40,7 @@
       </el-form>
     </div>
     <template #footer>
+      <el-button v-if="props.task" type="danger" plain @click="handleDelete">删除</el-button>
       <el-button @click="handleClose">取消</el-button>
       <el-button type="primary" @click="handleSave">保存</el-button>
     </template>
@@ -58,6 +59,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
   'save': [task: Partial<Task>]
+  'delete': [task: Task]
 }>()
 
 const visible = ref(false)
@@ -104,6 +106,12 @@ function handleSave() {
     ...form.value,
     date: form.value.date ? new Date(form.value.date) : null
   })
+  handleClose()
+}
+
+function handleDelete() {
+  if (!props.task) return
+  emit('delete', props.task)
   handleClose()
 }
 </script>

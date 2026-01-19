@@ -209,6 +209,7 @@
       v-model="dialogVisible"
       :task="editingTask"
       @save="handleSaveTask"
+      @delete="handleDeleteTask"
     />
   </div>
 </template>
@@ -393,6 +394,17 @@ function handleSaveTask(updates: Partial<Task>) {
       urgent: updates.urgent ?? false
     })
     isCreatingTask.value = false
+  }
+}
+
+async function handleDeleteTask(task: Task) {
+  try {
+    await taskStore.deleteTask(task.id)
+    editingTask.value = null
+    ElMessage.success('已删除任务')
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : '删除任务失败'
+    ElMessage.error(message)
   }
 }
 
