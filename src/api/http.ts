@@ -2,9 +2,16 @@ import axios from 'axios'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL as string | undefined
 
+function resolveApiBaseUrl(raw?: string) {
+  if (!raw) return '/api'
+  const trimmed = raw.replace(/\/+$/, '')
+  if (trimmed.endsWith('/api')) return trimmed
+  return `${trimmed}/api`
+}
+
 export const http = axios.create({
-  baseURL: API_BASE_URL || undefined,
-  timeout: 15000
+  baseURL: resolveApiBaseUrl(API_BASE_URL),
+  timeout: 45000
 })
 
 http.interceptors.request.use((config) => {

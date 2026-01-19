@@ -1,42 +1,64 @@
 <template>
   <el-dialog
     v-model="visible"
-    title="任务详情"
     width="560px"
+    :show-close="false"
+    class="detail-dialog"
     @close="handleClose"
   >
-    <div v-if="!isEditing" class="detail-view">
-      <div class="detail-card">
-        <div class="detail-header">
-          <div class="detail-title">{{ task?.title || '-' }}</div>
-          <el-tag :type="task?.completed ? 'success' : 'info'" effect="light">
-            {{ task?.completed ? '已完成' : '待办' }}
+    <div class="detail-card">
+      <div class="detail-header">
+        <div class="detail-title">{{ (isEditing ? form.title : task?.title) || '-' }}</div>
+        <div class="detail-header-actions">
+          <el-tag :type="(isEditing ? form.completed : task?.completed) ? 'success' : 'info'" effect="light">
+            {{ (isEditing ? form.completed : task?.completed) ? '已完成' : '待办' }}
           </el-tag>
-        </div>
-
-        <div class="detail-meta">
-          <div class="meta-item">
-            <span class="meta-label">清单</span>
-            <span class="meta-value">{{ task?.checklist || '-' }}</span>
-          </div>
-          <div class="meta-item">
-            <span class="meta-label">日期</span>
-            <span class="meta-value">{{ formattedDate }}</span>
-          </div>
-          <div class="meta-item">
-            <span class="meta-label">重要性</span>
-            <span class="meta-value">{{ task?.important ? '重要' : '不重要' }}</span>
-          </div>
-          <div class="meta-item">
-            <span class="meta-label">紧急度</span>
-            <span class="meta-value">{{ task?.urgent ? '紧急' : '不紧急' }}</span>
-          </div>
+          <el-button class="detail-close" circle size="small" @click="handleClose">
+            <el-icon><Close /></el-icon>
+          </el-button>
         </div>
       </div>
-    </div>
 
-    <div v-else class="detail-edit">
-      <div class="edit-card">
+      <template v-if="!isEditing">
+        <div class="detail-sub">
+          <span class="sub-item">清单：{{ task?.checklist || '-' }}</span>
+          <span class="sub-divider">•</span>
+          <span class="sub-item">日期：{{ formattedDate }}</span>
+        </div>
+
+        <div class="detail-grid">
+          <div class="detail-item">
+            <div class="item-label">重要性</div>
+            <div class="item-value">
+              <el-tag size="small" :type="task?.important ? 'warning' : 'info'" effect="light">
+                {{ task?.important ? '重要' : '普通' }}
+              </el-tag>
+            </div>
+          </div>
+          <div class="detail-item">
+            <div class="item-label">紧急度</div>
+            <div class="item-value">
+              <el-tag size="small" :type="task?.urgent ? 'danger' : 'info'" effect="light">
+                {{ task?.urgent ? '紧急' : '一般' }}
+              </el-tag>
+            </div>
+          </div>
+          <div class="detail-item">
+            <div class="item-label">状态</div>
+            <div class="item-value">
+              <el-tag size="small" :type="task?.completed ? 'success' : 'info'" effect="light">
+                {{ task?.completed ? '已完成' : '待办' }}
+              </el-tag>
+            </div>
+          </div>
+          <div class="detail-item">
+            <div class="item-label">任务类型</div>
+            <div class="item-value">个人任务</div>
+          </div>
+        </div>
+      </template>
+
+      <template v-else>
         <el-form :model="form" label-width="80px" class="detail-form">
           <el-form-item label="任务标题">
             <el-input v-model="form.title" placeholder="请输入任务标题" />
@@ -76,23 +98,24 @@
             />
           </el-form-item>
         </el-form>
+      </template>
+
+      <div class="detail-actions">
+        <template v-if="!isEditing">
+          <el-button type="primary" @click="isEditing = true">编辑</el-button>
+        </template>
+        <template v-else>
+          <el-button @click="handleCancelEdit">取消</el-button>
+          <el-button type="primary" @click="handleSave">保存</el-button>
+        </template>
       </div>
     </div>
-
-    <template #footer>
-      <template v-if="!isEditing">
-        <el-button type="primary" @click="isEditing = true">编辑</el-button>
-      </template>
-      <template v-else>
-        <el-button @click="handleCancelEdit">取消</el-button>
-        <el-button type="primary" @click="handleSave">保存</el-button>
-      </template>
-    </template>
   </el-dialog>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { Close } from '@element-plus/icons-vue'
 import type { Task } from '@/types/task'
 
 const props = defineProps<{
@@ -179,11 +202,26 @@ function handleSave() {
 </script>
 
 <style scoped>
+.detail-dialog :deep(.el-dialog__header) {
+  display: none;
+}
+
+.detail-dialog :deep(.el-dialog__body) {
+  padding: 18px 20px 22px;
+}
+
 .detail-card {
   border: 1px solid #eef2f7;
   border-radius: 14px;
   background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
   padding: 16px;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+  animation: none;
+  transform: none;
+}
+
+.detail-card:hover {
+  transform: none;
   box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
 }
 
@@ -195,43 +233,67 @@ function handleSave() {
   margin-bottom: 14px;
 }
 
+.detail-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.detail-close {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+}
+
 .detail-title {
   font-size: 18px;
   font-weight: 600;
   color: #0f172a;
 }
 
-.detail-meta {
-  display: grid;
-  gap: 10px;
+.detail-sub {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #64748b;
+  margin-bottom: 14px;
 }
 
-.meta-item {
+.sub-divider {
+  color: #cbd5e1;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.detail-item {
+  border: 1px solid #eef2f7;
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 12px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: #f8fafc;
-  border: 1px solid #eef2f7;
 }
 
-.meta-label {
+.item-label {
   font-size: 12px;
   color: #64748b;
 }
 
-.meta-value {
+.item-value {
   font-size: 13px;
   color: #0f172a;
 }
 
-.edit-card {
-  border: 1px solid #eef2f7;
-  border-radius: 14px;
-  background: #ffffff;
-  padding: 16px;
-  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+.detail-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
 }
 
 .detail-form :deep(.el-input__wrapper),

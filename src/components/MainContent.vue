@@ -4,7 +4,6 @@
       <el-icon class="menu-icon"><Menu /></el-icon>
       <h2 class="title">{{ currentTitle }}</h2>
       <div class="header-actions">
-        <span class="view-info">{{ filteredTasksCount }}L</span>
         <el-dropdown @command="handleHeaderCommand">
           <span class="more-trigger">
             <el-icon class="more-icon"><MoreFilled /></el-icon>
@@ -115,7 +114,7 @@
                         :task="task"
                         @toggle="(val) => handleToggleTask(task.id, val)"
                         @edit="() => handleEditTask(task)"
-                        @view="() => handleViewTask(task)"
+                        @view="() => handleEditTask(task)"
                       />
                     </div>
                   </div>
@@ -142,7 +141,7 @@
                       :task="task"
                       @toggle="(val) => handleToggleTask(task.id, val)"
                       @edit="() => handleEditTask(task)"
-                      @view="() => handleViewTask(task)"
+                      @view="() => handleEditTask(task)"
                     />
                     <div v-if="getQuadrantCompletedTasks(quadrant.type).length >= 5" class="view-more">
                       <a href="#" @click.prevent>查看更多</a>
@@ -160,7 +159,7 @@
       
       <!-- 日历视图 -->
       <template v-else-if="currentView === 'calendar'">
-        <CalendarView :tasks="filteredTasks" />
+        <CalendarView :tasks="filteredTasks" @edit="handleEditTask" />
       </template>
 
       <!-- 番茄钟视图 -->
@@ -188,7 +187,7 @@
           :task="task"
           @toggle="(val) => handleToggleTask(task.id, val)"
           @edit="() => handleEditTask(task)"
-          @view="() => handleViewTask(task)"
+          @view="() => handleEditTask(task)"
         />
           </div>
         </div>
@@ -211,11 +210,6 @@
       :task="editingTask"
       @save="handleSaveTask"
     />
-    <task-detail-dialog
-      v-model="detailDialogVisible"
-      :task="viewingTask"
-      @save="handleSaveDetail"
-    />
   </div>
 </template>
 
@@ -228,7 +222,6 @@ import { WarningFilled, InfoFilled, Plus, Close } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import TaskItem from './TaskItem.vue'
 import TaskDialog from './TaskDialog.vue'
-import TaskDetailDialog from './TaskDetailDialog.vue'
 import CalendarView from './CalendarView.vue'
 import PomodoroView from './PomodoroView.vue'
 import type { QuadrantType, Task } from '@/types/task'
@@ -243,8 +236,6 @@ const collapsedQuadrants = reactive<Record<string, boolean>>({})
 const editingTask = ref<Task | null>(null)
 const dialogVisible = ref(false)
 const isCreatingTask = ref(false)
-const viewingTask = ref<Task | null>(null)
-const detailDialogVisible = ref(false)
 
 const { currentView, currentFilter, hideCompleted, tasksByDate, tasksByQuadrant, lastFetchError, lastFetchAt, filteredTasks } = storeToRefs(taskStore)
 
@@ -292,15 +283,6 @@ watch(
   { immediate: true }
 )
 
-const filteredTasksCount = computed(() => {
-  if (currentView.value === 'quadrant') {
-    return Object.values(tasksByQuadrant.value).reduce(
-      (sum, q) => sum + q.completed.length + q.pending.length, 
-      0
-    )
-  }
-  return Object.values(tasksByDate.value).reduce((sum, tasks) => sum + tasks.length, 0)
-})
 
 const quadrants = [
   {
@@ -396,11 +378,6 @@ function handleEditTask(task: Task) {
   dialogVisible.value = true
 }
 
-function handleViewTask(task: Task) {
-  viewingTask.value = task
-  detailDialogVisible.value = true
-}
-
 function handleSaveTask(updates: Partial<Task>) {
   if (editingTask.value) {
     taskStore.updateTask(editingTask.value.id, updates)
@@ -425,11 +402,6 @@ function handleCreateTask() {
   dialogVisible.value = true
 }
 
-function handleSaveDetail(updates: Partial<Task>) {
-  if (viewingTask.value) {
-    taskStore.updateTask(viewingTask.value.id, updates)
-  }
-}
 
 function handleHeaderCommand(command: string) {
   if (command === 'toggle-hide-completed') {

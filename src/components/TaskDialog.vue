@@ -115,6 +115,13 @@ function handleSave() {
   background: #ffffff;
   padding: 16px;
   box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+  animation: none;
+  transform: none;
+}
+
+.edit-card:hover {
+  transform: none;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
 }
 
 .edit-form :deep(.el-input__wrapper),

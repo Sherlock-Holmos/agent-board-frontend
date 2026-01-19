@@ -55,6 +55,7 @@
                 class="task-chip"
                 :style="{ backgroundColor: taskColor(task.id) }"
                 :title="task.title"
+                @click="handleEdit(task)"
               >
                 {{ task.title }}
               </div>
@@ -89,6 +90,7 @@
                 class="week-task"
                 :style="{ backgroundColor: taskColor(task.id) }"
                 :title="task.title"
+                @click="handleEdit(task)"
               >
                 {{ task.title }}
               </div>
@@ -114,6 +116,10 @@ import type { Task } from '@/types/task'
 
 const props = defineProps<{
   tasks: Task[]
+}>()
+
+const emit = defineEmits<{
+  edit: [task: Task]
 }>()
 
 const weekDays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
@@ -291,6 +297,10 @@ function taskColor(id: string) {
     hash = (hash + id.charCodeAt(i) * (i + 1)) % palette.length
   }
   return palette[hash]
+}
+
+function handleEdit(task: Task) {
+  emit('edit', task)
 }
 
 function handleViewChange(item: { label: string; value: string; enabled: boolean }) {
@@ -508,6 +518,14 @@ function handleViewChange(item: { label: string; value: string; enabled: boolean
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  cursor: pointer;
+  transition: transform var(--motion-fast) var(--motion-ease),
+    box-shadow var(--motion-fast) var(--motion-ease);
+}
+
+.task-chip:hover {
+  transform: translate3d(0, -1px, 0);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12);
 }
 
 .more-tasks {
@@ -594,6 +612,13 @@ function handleViewChange(item: { label: string; value: string; enabled: boolean
   flex-direction: column;
   gap: 6px;
   overflow: hidden;
+  transition: background-color var(--motion-fast) var(--motion-ease),
+    box-shadow var(--motion-fast) var(--motion-ease);
+}
+
+.all-day-cell:hover {
+  background: rgba(59, 130, 246, 0.06);
+  box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.18);
 }
 
 .week-task {
@@ -604,11 +629,26 @@ function handleViewChange(item: { label: string; value: string; enabled: boolean
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  cursor: pointer;
+  transition: transform var(--motion-fast) var(--motion-ease),
+    box-shadow var(--motion-fast) var(--motion-ease);
+}
+
+.week-task:hover {
+  transform: translate3d(0, -1px, 0);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12);
 }
 
 .time-slot {
   border-right: 1px solid var(--app-border);
   border-bottom: 1px solid var(--app-border);
   background: linear-gradient(180deg, rgba(148, 163, 184, 0.08) 0, rgba(255, 255, 255, 0) 55%);
+  transition: background-color var(--motion-fast) var(--motion-ease),
+    box-shadow var(--motion-fast) var(--motion-ease);
+}
+
+.time-slot:hover {
+  background: rgba(59, 130, 246, 0.04);
+  box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.12);
 }
 </style>
