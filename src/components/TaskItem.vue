@@ -2,6 +2,7 @@
   <div class="task-item" @click="$emit('view')" @dblclick="$emit('edit')">
     <el-checkbox
       :model-value="task.completed"
+      :disabled="trashMode"
       @click.stop
       @change="(val) => $emit('toggle', val)"
       class="task-checkbox"
@@ -18,6 +19,10 @@
       </span>
       <span v-else class="task-checklist">{{ task.checklist }}</span>
     </div>
+    <div v-if="trashMode" class="task-actions" @click.stop>
+      <el-button size="small" plain @click="$emit('restore')">还原</el-button>
+      <el-button size="small" type="danger" plain @click="$emit('hard-delete')">彻底删除</el-button>
+    </div>
   </div>
 </template>
 
@@ -28,12 +33,15 @@ import type { Task } from '@/types/task'
 
 const props = defineProps<{
   task: Task
+  trashMode?: boolean
 }>()
 
 defineEmits<{
   toggle: [value: boolean]
   edit: []
   view: []
+  restore: []
+  'hard-delete': []
 }>()
 
 const taskStore = useTaskStore()
@@ -93,6 +101,13 @@ const dateStatus = computed(() => {
 
 .task-meta {
   flex-shrink: 0;
+}
+
+.task-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 8px;
 }
 
 .task-checklist {

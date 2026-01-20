@@ -111,11 +111,11 @@
         </div>
       </div>
       <div v-if="currentView !== 'quadrant' && currentView !== 'calendar'" class="bottom-actions">
-        <div class="action-item">
+        <div class="action-item" @click="handleNavClick('completed')">
           <el-icon><Checked /></el-icon>
           <span>已完成</span>
         </div>
-        <div class="action-item">
+        <div class="action-item" @click="handleNavClick('trash')">
           <el-icon><Delete /></el-icon>
           <span>垃圾桶</span>
         </div>
@@ -143,7 +143,7 @@ import {
   Box,
   Cpu
 } from '@element-plus/icons-vue'
-import { Setting, DataAnalysis, SwitchButton } from '@element-plus/icons-vue'
+import { Setting, DataAnalysis, SwitchButton, Checked } from '@element-plus/icons-vue'
 import type { FilterType } from '@/types/task'
 import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'

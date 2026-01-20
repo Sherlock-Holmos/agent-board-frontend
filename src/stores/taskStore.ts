@@ -5,11 +5,15 @@ import {
   apiCreateTodo,
   apiCompleteTodo,
   apiDeleteTodo,
+  apiGetDeletedTodos,
+  apiGetCompletedTodos,
   apiGetAllTodos,
   apiGetInboxTodos,
   apiGetNext7DaysTodos,
   apiGetTodayTodos,
+  apiHardDeleteTodo,
   apiPatchTodo,
+  apiRestoreTodo,
   apiUncompleteTodo
 } from '@/api/todos'
 import type { TodoDTO, TodoUpdateRequest } from '@/api/types'
@@ -33,6 +37,37 @@ export const useTaskStore = defineStore('task', () => {
     const title = todo.title || todo.name || ''
     const completed = todo.completed ?? todo.isCompleted ?? false
     const date = toDate(todo.dueDate || todo.date || todo.todoDate)
+    const rawPriority = (todo.priority ?? '').toString().toUpperCase()
+    let priority: Task['priority'] | undefined
+
+    switch (rawPriority) {
+      case 'P1':
+        priority = 'p1'
+        break
+      case 'P2':
+        priority = 'p2'
+        break
+      case 'P3':
+        priority = 'p3'
+        break
+      case 'P4':
+        priority = 'p4'
+        break
+      case 'HIGH':
+        priority = 'p1'
+        break
+      case 'MEDIUM':
+        priority = 'p2'
+        break
+      case 'LOW':
+        priority = 'p4'
+        break
+      default:
+        priority = undefined
+    }
+
+    const important = priority === 'p1' || priority === 'p2'
+    const urgent = priority === 'p1' || priority === 'p3'
 
     return {
       id: String(todo.id ?? Date.now()),
@@ -40,11 +75,18 @@ export const useTaskStore = defineStore('task', () => {
       completed,
       date,
       checklist: todo.listName || '收集箱',
-      priority: (todo.priority?.toLowerCase() as Task['priority']) ?? undefined,
+      priority,
       tags: todo.tags ? todo.tags.split(',').map(t => t.trim()).filter(Boolean) : undefined,
-      important: todo.priority ? todo.priority.toUpperCase() === 'HIGH' : false,
-      urgent: false
+      important,
+      urgent
     }
+  }
+
+  function toQuadrantPriority(important?: boolean, urgent?: boolean): Task['priority'] {
+    if (important && urgent) return 'p1'
+    if (important && !urgent) return 'p2'
+    if (!important && urgent) return 'p3'
+    return 'p4'
   }
 
   async function fetchTodosForCurrentFilter() {
@@ -60,6 +102,12 @@ export const useTaskStore = defineStore('task', () => {
           break
         case 'inbox':
           list = await apiGetInboxTodos()
+          break
+        case 'trash':
+          list = await apiGetDeletedTodos()
+          break
+        case 'completed':
+          list = await apiGetCompletedTodos()
           break
         case 'summary':
         case 'all':
@@ -238,7 +286,8 @@ export const useTaskStore = defineStore('task', () => {
         taskDate.setHours(0, 0, 0, 0)
         return taskDate >= sevenDaysAgo && taskDate <= today
       }).length,
-      inbox: tasks.value.filter(task => task.checklist === '收集箱').length
+      inbox: tasks.value.filter(task => task.checklist === '收集箱').length,
+      completed: tasks.value.filter(task => task.completed).length
     }
   })
 
@@ -249,7 +298,7 @@ export const useTaskStore = defineStore('task', () => {
       completed: task.completed,
       dueDate: task.date ? task.date.toISOString().split('T')[0] : null,
       listName: task.checklist,
-      priority: task.priority ? task.priority.toUpperCase() : undefined,
+      priority: (task.priority ?? toQuadrantPriority(task.important, task.urgent))?.toUpperCase(),
       tags: task.tags ? task.tags.join(',') : undefined
     }
 
@@ -284,6 +333,22 @@ export const useTaskStore = defineStore('task', () => {
     if (index === -1) return
     const numericId = Number(id)
     await apiDeleteTodo(numericId)
+    tasks.value.splice(index, 1)
+  }
+
+  async function hardDeleteTask(id: string) {
+    const index = tasks.value.findIndex(t => t.id === id)
+    if (index === -1) return
+    const numericId = Number(id)
+    await apiHardDeleteTodo(numericId)
+    tasks.value.splice(index, 1)
+  }
+
+  async function restoreTask(id: string) {
+    const index = tasks.value.findIndex(t => t.id === id)
+    if (index === -1) return
+    const numericId = Number(id)
+    await apiRestoreTodo(numericId)
     tasks.value.splice(index, 1)
   }
 
@@ -340,6 +405,15 @@ export const useTaskStore = defineStore('task', () => {
       payload.priority = updates.priority ? updates.priority.toUpperCase() : undefined
     }
 
+    if (updates.important !== undefined || updates.urgent !== undefined) {
+      const nextImportant = updates.important ?? task.important ?? false
+      const nextUrgent = updates.urgent ?? task.urgent ?? false
+      const nextPriority = toQuadrantPriority(nextImportant, nextUrgent)
+      if (nextPriority !== task.priority) {
+        payload.priority = nextPriority.toUpperCase()
+      }
+    }
+
     if (updates.tags !== undefined) {
       const nextTags = updates.tags ? updates.tags.join(',') : undefined
       const currentTags = task.tags ? task.tags.join(',') : undefined
@@ -385,6 +459,8 @@ export const useTaskStore = defineStore('task', () => {
     addTask,
     toggleTask,
     deleteTask,
+    hardDeleteTask,
+    restoreTask,
     setFilter,
     setView,
     updateTask,

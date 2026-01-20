@@ -37,11 +37,16 @@
       </el-input>
     </div>
     <div v-if="currentView === 'calendar' || currentView === 'quadrant'" class="floating-dock">
-      <el-button class="dock-toggle" circle @click="floatingOpen = !floatingOpen">
+      <el-button
+        class="dock-toggle"
+        :class="{ hidden: floatingOpen }"
+        circle
+        @click="floatingOpen = !floatingOpen"
+      >
         <el-icon><Plus /></el-icon>
       </el-button>
-      <transition name="float-pop">
-        <div v-if="floatingOpen" class="floating-input">
+      <transition name="dock-pop">
+        <div v-show="floatingOpen" class="floating-input" :class="{ open: floatingOpen }">
           <div class="floating-card">
             <div class="floating-header">
               <div class="floating-title">快速添加</div>
@@ -185,9 +190,12 @@
           v-for="task in tasks" 
           :key="task.id" 
           :task="task"
+          :trash-mode="currentFilter === 'trash'"
           @toggle="(val) => handleToggleTask(task.id, val)"
           @edit="() => handleEditTask(task)"
           @view="() => handleEditTask(task)"
+          @restore="() => handleRestoreTask(task)"
+          @hard-delete="() => handleHardDeleteTask(task)"
         />
           </div>
         </div>
@@ -257,6 +265,7 @@ const currentTitle = computed(() => {
     today: '今天',
     last7days: '最近7天',
     inbox: '收集箱',
+    trash: '垃圾桶',
     summary: '摘要'
   }
   return map[currentFilter.value] || '所有'
@@ -556,10 +565,31 @@ function handleHeaderCommand(command: string) {
 }
 
 async function handleToggleTask(id: string, completed: boolean) {
+  if (currentFilter.value === 'trash') return
   try {
     await taskStore.toggleTask(id, completed)
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : '更新任务失败'
+    ElMessage.error(message)
+  }
+}
+
+async function handleRestoreTask(task: Task) {
+  try {
+    await taskStore.restoreTask(task.id)
+    ElMessage.success('已还原任务')
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : '还原任务失败'
+    ElMessage.error(message)
+  }
+}
+
+async function handleHardDeleteTask(task: Task) {
+  try {
+    await taskStore.hardDeleteTask(task.id)
+    ElMessage.success('已彻底删除')
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : '删除任务失败'
     ElMessage.error(message)
   }
 }
@@ -681,9 +711,12 @@ async function handleToggleTask(id: string, completed: boolean) {
   right: 18px;
   bottom: 22px;
   z-index: 6;
-  display: flex;
-  align-items: flex-end;
-  gap: 12px;
+  display: block;
+  width: 44px;
+  height: 44px;
+  position: absolute;
+  right: 18px;
+  bottom: 22px;
 }
 
 .dock-toggle {
@@ -694,15 +727,30 @@ async function handleToggleTask(id: string, completed: boolean) {
   color: #fff;
   border: none;
   box-shadow: 0 16px 32px rgba(59, 130, 246, 0.28);
+  transition: transform 0.2s ease, opacity 0.2s ease, visibility 0.2s ease;
+  position: absolute;
+  right: 0;
+  bottom: 0;
 }
 
 .dock-toggle:hover {
   transform: translate3d(0, -2px, 0);
 }
 
+.dock-toggle.hidden {
+  opacity: 0;
+  transform: scale(0.2);
+  pointer-events: none;
+  visibility: hidden;
+}
+
 .floating-input {
   max-width: 360px;
   width: 320px;
+  transform-origin: right bottom;
+  position: absolute;
+  right: 0;
+  bottom: 0;
 }
 
 .floating-card {
@@ -739,15 +787,22 @@ async function handleToggleTask(id: string, completed: boolean) {
   color: var(--app-muted);
 }
 
-.float-pop-enter-active,
-.float-pop-leave-active {
-  transition: all var(--motion-normal) var(--motion-ease);
+.dock-pop-enter-active,
+.dock-pop-leave-active {
+  transition: transform 0.26s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.2s ease;
 }
 
-.float-pop-enter-from,
-.float-pop-leave-to {
+.dock-pop-enter-from,
+.dock-pop-leave-to {
   opacity: 0;
-  transform: translate3d(0, 10px, 0) scale(0.98);
+  transform: translate3d(20px, 20px, 0) scale(0.2);
+}
+
+.dock-pop-enter-to,
+.dock-pop-leave-from {
+  opacity: 1;
+  transform: translate3d(0, 0, 0) scale(1);
 }
 
 .task-list {

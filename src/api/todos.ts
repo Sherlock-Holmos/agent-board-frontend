@@ -23,6 +23,14 @@ export async function apiDeleteTodo(id: number) {
   await http.delete(`/todos/${id}`)
 }
 
+export async function apiRestoreTodo(id: number) {
+  await http.post(`/todos/${id}/restore`)
+}
+
+export async function apiHardDeleteTodo(id: number) {
+  await http.delete(`/todos/${id}/hard-delete`)
+}
+
 export async function apiCompleteTodo(id: number) {
   const { data } = await http.post<ApiResponse<TodoDTO> | TodoDTO>(`/todos/${id}/complete`)
   return extractData(data, {} as TodoDTO)
@@ -50,6 +58,16 @@ export async function apiGetNext7DaysTodos() {
 
 export async function apiGetInboxTodos() {
   const { data } = await http.get<ApiResponse<TodoDTO[]> | TodoDTO[]>('/todos/inbox')
+  return extractData(data, [])
+}
+
+export async function apiGetDeletedTodos() {
+  const { data } = await http.get<ApiResponse<TodoDTO[]> | TodoDTO[]>('/todos/deleted')
+  return extractData(data, [])
+}
+
+export async function apiGetCompletedTodos() {
+  const { data } = await http.get<ApiResponse<TodoDTO[]> | TodoDTO[]>('/todos/completed')
   return extractData(data, [])
 }
 

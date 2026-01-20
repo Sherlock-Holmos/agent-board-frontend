@@ -4,7 +4,7 @@ export interface Task {
   completed: boolean
   date?: Date | null
   checklist: string
-  priority?: 'low' | 'medium' | 'high'
+  priority?: 'p1' | 'p2' | 'p3' | 'p4'
   tags?: string[]
   // 四象限属性
   important?: boolean  // 重要性
@@ -17,6 +17,6 @@ export interface Checklist {
   icon?: string
 }
 
-export type FilterType = 'all' | 'today' | 'last7days' | 'inbox' | 'summary' | 'quadrant'
+export type FilterType = 'all' | 'today' | 'last7days' | 'inbox' | 'completed' | 'trash' | 'summary' | 'quadrant'
 
 export type QuadrantType = 'I' | 'II' | 'III' | 'IV'
