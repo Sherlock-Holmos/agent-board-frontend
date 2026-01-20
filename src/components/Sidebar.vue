@@ -114,19 +114,6 @@
           <el-icon v-if="currentFilter === 'list' && currentListName === item.name" class="check-icon"><Check /></el-icon>
         </div>
       </div>
-      <div v-if="currentView !== 'quadrant' && currentView !== 'calendar'" class="info-sections">
-        <div class="info-section">
-          <h4>清单</h4>
-        </div>
-        <div class="info-section">
-          <h4>过滤器</h4>
-          <p>根据清单、时间、优先级、标签等过滤出特定的任务</p>
-        </div>
-        <div class="info-section">
-          <h4>标签</h4>
-          <p>以标签的维度展示不同清单的任务。在添加任务时输入"#"可快速选择标签</p>
-        </div>
-      </div>
       <div v-if="currentView !== 'quadrant' && currentView !== 'calendar'" class="bottom-actions">
         <div class="action-item" @click="handleNavClick('completed')">
           <el-icon><Checked /></el-icon>
@@ -470,50 +457,34 @@ function handleHelpCommand(command: string) {
   margin-left: 4px;
 }
 
-.info-sections {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding-top: 8px;
-  border-top: 1px solid #f0f0f0;
-}
-
-.info-section h4 {
-  font-size: 13px;
-  font-weight: 600;
-  color: #333;
-  margin-bottom: 4px;
-}
-
-.info-section p {
-  font-size: 12px;
-  color: #666;
-  line-height: 1.5;
-}
-
 .bottom-actions {
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid #eef1f6;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  margin-top: auto;
-  padding-top: 16px;
-  border-top: 1px solid #f0f0f0;
+  gap: 6px;
 }
 
 .action-item {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 12px;
-  font-size: 13px;
-  color: #666;
-  cursor: pointer;
+  padding: 6px 12px;
   border-radius: 6px;
+  cursor: pointer;
+  color: #2c3442;
+  font-size: 14px;
   transition: background-color 0.2s;
 }
 
 .action-item:hover {
   background-color: #f5f5f5;
+}
+
+.action-item .el-icon {
+  font-size: 16px;
+  color: #666;
 }
 
 .action-item.upgrade {
