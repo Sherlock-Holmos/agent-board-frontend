@@ -109,7 +109,6 @@ export const useTaskStore = defineStore('task', () => {
         case 'completed':
           list = await apiGetCompletedTodos()
           break
-        case 'summary':
         case 'all':
         default:
           list = await apiGetAllTodos()

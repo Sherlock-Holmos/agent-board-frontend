@@ -195,12 +195,6 @@ const navItems = computed(() => [
     icon: Box,
     iconClass: ''
   },
-  { 
-    key: 'summary' as FilterType, 
-    label: '摘要',
-    icon: Document,
-    iconClass: ''
-  }
 ])
 
 function handleNavClick(key: FilterType) {

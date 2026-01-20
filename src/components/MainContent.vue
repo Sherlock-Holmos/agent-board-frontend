@@ -266,13 +266,8 @@ const currentTitle = computed(() => {
     last7days: '最近7天',
     inbox: '收集箱',
     trash: '垃圾桶',
-    summary: '摘要'
   }
   return map[currentFilter.value] || '所有'
-})
-
-const currentChecklist = computed(() => {
-  return '收集箱'
 })
 
 const inputPlaceholder = computed(() => {
@@ -576,12 +571,6 @@ async function handleDeleteTask(task: Task) {
     const message = err instanceof Error ? err.message : '删除任务失败'
     ElMessage.error(message)
   }
-}
-
-function handleCreateTask() {
-  editingTask.value = null
-  isCreatingTask.value = true
-  dialogVisible.value = true
 }
 
 

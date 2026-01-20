@@ -14,10 +14,10 @@
       {{ task.title }}
     </span>
     <div class="task-meta">
+      <span class="task-checklist">{{ task.checklist }}</span>
       <span v-if="task.date" class="task-date" :class="dateStatus">
-        {{ task.checklist }} {{ formattedDate }}
+        {{ formattedDate }}
       </span>
-      <span v-else class="task-checklist">{{ task.checklist }}</span>
     </div>
     <div v-if="trashMode" class="task-actions" @click.stop>
       <el-button size="small" plain @click="$emit('restore')">还原</el-button>
@@ -101,6 +101,9 @@ const dateStatus = computed(() => {
 
 .task-meta {
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .task-actions {
@@ -121,6 +124,9 @@ const dateStatus = computed(() => {
 .task-date {
   font-size: 12px;
   color: #999;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(148, 163, 184, 0.12);
 }
 
 .task-date.date-today {
