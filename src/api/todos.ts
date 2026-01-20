@@ -61,6 +61,16 @@ export async function apiGetInboxTodos() {
   return extractData(data, [])
 }
 
+export async function apiGetTodosByList(listName: string) {
+  const { data } = await http.get<ApiResponse<TodoDTO[]> | TodoDTO[]>(`/todos/list/${encodeURIComponent(listName)}`)
+  return extractData(data, [])
+}
+
+export async function apiGetTodoLists() {
+  const { data } = await http.get<ApiResponse<string[]> | string[]>('/todos/lists')
+  return extractData(data, [])
+}
+
 export async function apiGetDeletedTodos() {
   const { data } = await http.get<ApiResponse<TodoDTO[]> | TodoDTO[]>('/todos/deleted')
   return extractData(data, [])

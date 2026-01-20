@@ -11,6 +11,8 @@ import {
   apiGetInboxTodos,
   apiGetNext7DaysTodos,
   apiGetTodayTodos,
+  apiGetTodoLists,
+  apiGetTodosByList,
   apiHardDeleteTodo,
   apiPatchTodo,
   apiRestoreTodo,
@@ -24,6 +26,8 @@ export const useTaskStore = defineStore('task', () => {
   const lastFetchAt = ref<Date | null>(null)
 
   const currentFilter = ref<FilterType>('all')
+  const currentListName = ref<string | null>(null)
+  const listNames = ref<string[]>([])
   const currentView = ref<'normal' | 'quadrant' | 'calendar' | 'pomodoro'>('normal')
   const hideCompleted = ref(false)
 
@@ -103,6 +107,13 @@ export const useTaskStore = defineStore('task', () => {
         case 'inbox':
           list = await apiGetInboxTodos()
           break
+        case 'list':
+          if (currentListName.value) {
+            list = await apiGetTodosByList(currentListName.value)
+          } else {
+            list = await apiGetAllTodos()
+          }
+          break
         case 'trash':
           list = await apiGetDeletedTodos()
           break
@@ -121,6 +132,12 @@ export const useTaskStore = defineStore('task', () => {
     }
     tasks.value = list.map(mapTodoToTask)
     lastFetchAt.value = new Date()
+
+    try {
+      listNames.value = await apiGetTodoLists()
+    } catch {
+      // ignore list fetch errors
+    }
   }
 
   const filteredTasks = computed(() => {
@@ -353,12 +370,20 @@ export const useTaskStore = defineStore('task', () => {
 
   function setFilter(filter: FilterType) {
     currentFilter.value = filter
+    if (filter !== 'list') {
+      currentListName.value = null
+    }
     // 设置过滤器时，如果不是四象限视图，确保是普通视图
     if (currentView.value === 'quadrant' && filter !== 'quadrant') {
       currentView.value = 'normal'
     }
 
     void fetchTodosForCurrentFilter()
+  }
+
+  function setListFilter(listName: string) {
+    currentListName.value = listName
+    setFilter('list')
   }
 
   function setView(view: 'normal' | 'quadrant' | 'calendar' | 'pomodoro') {
@@ -447,6 +472,8 @@ export const useTaskStore = defineStore('task', () => {
   return {
     tasks,
     currentFilter,
+    currentListName,
+    listNames,
     currentView,
     hideCompleted,
     lastFetchError,
@@ -460,6 +487,7 @@ export const useTaskStore = defineStore('task', () => {
     deleteTask,
     hardDeleteTask,
     restoreTask,
+    setListFilter,
     setFilter,
     setView,
     updateTask,

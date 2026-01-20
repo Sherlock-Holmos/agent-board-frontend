@@ -96,10 +96,27 @@
           <el-icon v-if="currentFilter === item.key" class="check-icon"><Check /></el-icon>
         </div>
       </div>
+      <div v-if="currentView !== 'quadrant' && currentView !== 'calendar'" class="list-section">
+        <div class="list-title">清单</div>
+        <div v-if="listItems.length === 0" class="list-empty">暂无清单</div>
+        <div
+          v-for="item in listItems"
+          :key="item.name"
+          class="nav-item"
+          :class="{ active: currentFilter === 'list' && currentListName === item.name }"
+          @click="handleListClick(item.name)"
+        >
+          <el-icon class="nav-icon">
+            <Box />
+          </el-icon>
+          <span class="nav-label">{{ item.name }}</span>
+          <span class="nav-count">{{ item.count }}</span>
+          <el-icon v-if="currentFilter === 'list' && currentListName === item.name" class="check-icon"><Check /></el-icon>
+        </div>
+      </div>
       <div v-if="currentView !== 'quadrant' && currentView !== 'calendar'" class="info-sections">
         <div class="info-section">
           <h4>清单</h4>
-          <p>用清单来分类收集、组织和管理你的任务和笔记</p>
         </div>
         <div class="info-section">
           <h4>过滤器</h4>
@@ -165,6 +182,7 @@ const userStore = useUserStore()
 
 const currentFilter = computed(() => taskStore.currentFilter)
 const currentView = computed(() => taskStore.currentView)
+const currentListName = computed(() => taskStore.currentListName)
 
 const navItems = computed(() => [
   { 
@@ -188,18 +206,26 @@ const navItems = computed(() => [
     icon: Calendar,
     iconClass: ''
   },
-  { 
-    key: 'inbox' as FilterType, 
-    label: '收集箱', 
-    count: taskStore.taskCounts.inbox,
-    icon: Box,
-    iconClass: ''
-  },
 ])
+
+const listItems = computed(() => {
+  const names = taskStore.listNames
+  return names.map(name => ({
+    name,
+    count: taskStore.tasks.filter(task => task.checklist === name).length
+  }))
+})
 
 function handleNavClick(key: FilterType) {
   taskStore.setFilter(key)
   // 切换到普通视图
+  if (taskStore.currentView === 'quadrant') {
+    taskStore.setView('normal')
+  }
+}
+
+function handleListClick(name: string) {
+  taskStore.setListFilter(name)
   if (taskStore.currentView === 'quadrant') {
     taskStore.setView('normal')
   }
@@ -360,6 +386,25 @@ function handleHelpCommand(command: string) {
   display: flex;
   flex-direction: column;
   gap: 24px;
+}
+
+.list-section {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--app-border);
+}
+
+.list-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--app-muted);
+  margin-bottom: 8px;
+}
+
+.list-empty {
+  font-size: 12px;
+  color: var(--app-muted);
+  padding: 6px 8px;
 }
 
 .profile {

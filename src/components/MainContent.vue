@@ -260,6 +260,9 @@ const currentTitle = computed(() => {
   if (currentView.value === 'pomodoro') {
     return '番茄专注'
   }
+  if (currentFilter.value === 'list') {
+    return taskStore.currentListName || '清单'
+  }
   const map: Record<string, string> = {
     all: '所有',
     today: '今天',

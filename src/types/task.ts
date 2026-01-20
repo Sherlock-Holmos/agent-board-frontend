@@ -17,6 +17,6 @@ export interface Checklist {
   icon?: string
 }
 
-export type FilterType = 'all' | 'today' | 'last7days' | 'inbox' | 'completed' | 'trash' | 'quadrant'
+export type FilterType = 'all' | 'today' | 'last7days' | 'inbox' | 'completed' | 'trash' | 'list' | 'quadrant'
 
 export type QuadrantType = 'I' | 'II' | 'III' | 'IV'
