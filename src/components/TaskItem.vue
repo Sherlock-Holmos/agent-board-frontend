@@ -13,7 +13,7 @@
       {{ task.title }}
     </span>
     <div class="task-meta">
-      <span v-if="task.date" class="task-date">
+      <span v-if="task.date" class="task-date" :class="dateStatus">
         {{ task.checklist }} {{ formattedDate }}
       </span>
       <span v-else class="task-checklist">{{ task.checklist }}</span>
@@ -40,6 +40,22 @@ const taskStore = useTaskStore()
 
 const formattedDate = computed(() => {
   return taskStore.formatTaskDate(props.task)
+})
+
+const dateStatus = computed(() => {
+  if (!props.task.date) return 'date-none'
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const taskDate = new Date(props.task.date)
+  taskDate.setHours(0, 0, 0, 0)
+
+  if (!props.task.completed && taskDate.getTime() < today.getTime()) {
+    return 'date-overdue'
+  }
+  if (taskDate.getTime() === today.getTime()) {
+    return 'date-today'
+  }
+  return 'date-future'
 })
 </script>
 
@@ -90,5 +106,20 @@ const formattedDate = computed(() => {
 .task-date {
   font-size: 12px;
   color: #999;
+}
+
+.task-date.date-today {
+  color: #2563eb;
+  font-weight: 600;
+}
+
+.task-date.date-future {
+  color: #16a34a;
+  font-weight: 600;
+}
+
+.task-date.date-overdue {
+  color: #dc2626;
+  font-weight: 600;
 }
 </style>

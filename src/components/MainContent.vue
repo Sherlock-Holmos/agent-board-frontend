@@ -221,6 +221,7 @@ import { useTaskStore } from '@/stores/taskStore'
 import { useUserStore } from '@/stores/userStore'
 import { WarningFilled, InfoFilled, Plus, Close } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import { apiExecuteAgent } from '@/api/agent'
 import TaskItem from './TaskItem.vue'
 import TaskDialog from './TaskDialog.vue'
 import CalendarView from './CalendarView.vue'
@@ -237,6 +238,7 @@ const collapsedQuadrants = reactive<Record<string, boolean>>({})
 const editingTask = ref<Task | null>(null)
 const dialogVisible = ref(false)
 const isCreatingTask = ref(false)
+const agentProcessing = ref(false)
 
 const { currentView, currentFilter, hideCompleted, tasksByDate, tasksByQuadrant, lastFetchError, lastFetchAt, filteredTasks } = storeToRefs(taskStore)
 
@@ -346,8 +348,98 @@ function getQuadrantCompletedTasks(quadrantType: QuadrantType): Task[] {
   })
 }
 
+function parseQuickTask(raw: string) {
+  const now = new Date()
+  const text = raw.trim()
+  let date: Date | null = null
+
+  const isoMatch = text.match(/(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/)
+  if (isoMatch) {
+    const [_, y, m, d] = isoMatch
+    date = new Date(Number(y), Number(m) - 1, Number(d))
+  }
+
+  if (!date) {
+    const mdMatch = text.match(/(\d{1,2})月(\d{1,2})日/)
+    if (mdMatch) {
+      const [_, m, d] = mdMatch
+      date = new Date(now.getFullYear(), Number(m) - 1, Number(d))
+    }
+  }
+
+  if (!date) {
+    const dayMatch = text.match(/(\d{1,2})号/)
+    if (dayMatch) {
+      const day = Number(dayMatch[1])
+      date = new Date(now.getFullYear(), now.getMonth(), day)
+    }
+  }
+
+  if (!date) {
+    if (text.includes('明天')) {
+      date = new Date(now)
+      date.setDate(now.getDate() + 1)
+    } else if (text.includes('后天')) {
+      date = new Date(now)
+      date.setDate(now.getDate() + 2)
+    } else if (text.includes('今天')) {
+      date = new Date(now)
+    }
+  }
+
+  if (date) {
+    date.setHours(12, 0, 0, 0)
+  }
+
+  let title = text
+    .replace(/\d{4}[-/.]\d{1,2}[-/.]\d{1,2}/g, '')
+    .replace(/\d{1,2}月\d{1,2}日/g, '')
+    .replace(/\d{1,2}号/g, '')
+    .replace(/今天|明天|后天/g, '')
+    .replace(/我要|我想|需要|去|要/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  if (!title) {
+    title = text
+  }
+
+  return { title, date }
+}
+
 async function handleAddTask() {
   if (newTaskTitle.value.trim()) {
+    if (agentEnabled.value) {
+      if (agentProcessing.value) return
+      agentProcessing.value = true
+      const prompt = newTaskTitle.value.trim()
+      newTaskTitle.value = ''
+      try {
+        const quick = parseQuickTask(prompt)
+        if (quick.title) {
+          await taskStore.addTask({
+            title: quick.title,
+            completed: false,
+            date: quick.date,
+            checklist: '收集箱',
+            important: false,
+            urgent: false
+          })
+        } else {
+          const res = await apiExecuteAgent(prompt)
+          if (res.status !== 'success') {
+            ElMessage.error(res.error || 'Agent 处理失败')
+          }
+          await taskStore.fetchTodosForCurrentFilter()
+        }
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Agent 处理失败'
+        ElMessage.error(message)
+      } finally {
+        agentProcessing.value = false
+      }
+      return
+    }
     try {
       await taskStore.addTask({
         title: newTaskTitle.value.trim(),
