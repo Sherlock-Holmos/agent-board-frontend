@@ -407,6 +407,44 @@ function parseQuickTask(raw: string) {
   return { title, date }
 }
 
+function extractDeleteTitle(raw: string) {
+  return raw
+    .replace(/^(删除|移除|清理)/, '')
+    .replace(/待办|任务/g, '')
+    .trim()
+}
+
+async function tryQuickDelete(input: string) {
+  const deleteKeywords = /(删除|移除|清理)/
+  let target = ''
+
+  if (deleteKeywords.test(input)) {
+    target = extractDeleteTitle(input)
+  } else {
+    // 没有明确删除关键词时，如果输入完全匹配已有标题，则按删除处理
+    const match = taskStore.tasks.find(t => t.title === input)
+    if (match) {
+      target = match.title
+    }
+  }
+
+  if (!target) return false
+
+  const matches = taskStore.tasks.filter(t => t.title === target)
+  if (matches.length === 0) {
+    ElMessage.warning('未找到可删除的任务')
+    return true
+  }
+  if (matches.length > 1) {
+    ElMessage.warning('存在多个同名任务，请使用完整标题或先进入任务列表删除')
+    return true
+  }
+
+  await taskStore.deleteTask(matches[0].id)
+  ElMessage.success('已删除任务')
+  return true
+}
+
 async function handleAddTask() {
   if (newTaskTitle.value.trim()) {
     if (agentEnabled.value) {
@@ -415,6 +453,10 @@ async function handleAddTask() {
       const prompt = newTaskTitle.value.trim()
       newTaskTitle.value = ''
       try {
+        if (await tryQuickDelete(prompt)) {
+          agentProcessing.value = false
+          return
+        }
         const quick = parseQuickTask(prompt)
         if (quick.title) {
           await taskStore.addTask({
