@@ -75,34 +75,33 @@
         </div>
 
         <div v-else class="panel">
-          <div class="panel-header">
-            <span>画像面板</span>
+          <div class="panel-header persona-header-flex">
+            <span class="persona-title">画像面板</span>
             <el-tag type="warning" effect="light">建议参考</el-tag>
           </div>
-          <div class="panel-body">
+          <div class="panel-body persona-body-flex">
             <div v-if="profileFeatures.length === 0 && !profileSummaryLine" class="persona-empty">
               暂无画像信息，请先与 Agent 对话。
             </div>
-            <div v-else class="persona-section">
-              <div class="persona-section-title">特征画像</div>
-              <div class="persona-list">
-                <span
-                  v-for="(line, idx) in profileFeatures"
-                  :key="idx"
-                  class="persona-bubble"
-                  :style="bubbleStyle(idx)"
-                >
-                  {{ line }}
-                </span>
+            <template v-else>
+              <div class="persona-list-bubble-bg">
+                <div class="persona-bubble-bg-illust"></div>
+                <div class="persona-list-bubble">
+                  <span
+                    v-for="(line, idx) in profileFeatures"
+                    :key="idx"
+                    class="persona-bubble-colored"
+                    :style="bubbleStyle(idx)"
+                  >
+                    {{ line }}
+                  </span>
+                </div>
               </div>
-            </div>
-            <div v-if="profileSummaryLine" class="persona-section">
-              <div class="persona-section-title">一句话总结</div>
-              <p class="persona-summary">{{ profileSummaryLine }}</p>
-            </div>
-            <p class="persona-tip">画像由近期对话推断，仅供安排参考。</p>
-            <div class="persona-actions">
-              <el-button size="small" type="danger" plain @click="handleClearProfile">
+              <div v-if="profileSummaryLine" class="persona-summary-bold">{{ profileSummaryLine }}</div>
+            </template>
+            <div class="persona-bottom-row">
+              <span class="persona-tip persona-tip-bottom">画像由近期对话推断，仅供安排参考。</span>
+              <el-button size="small" type="danger" plain @click="handleClearProfile" class="persona-clear-btn">
                 清空画像
               </el-button>
             </div>
@@ -506,29 +505,86 @@ function handleClearProfile() {
     height: auto;
   }
 
-.persona-list {
+
+.persona-header-flex {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.persona-title {
+  font-weight: 700;
+  font-size: 16px;
+}
+.persona-body-flex {
+  display: flex;
+  flex-direction: column;
+  min-height: 260px;
+  gap: 10px;
+}
+.persona-list-bubble-bg {
+  position: relative;
+  min-height: 120px;
+  margin-bottom: 12px;
+}
+.persona-bubble-bg-illust {
+  position: absolute;
+  left: 0; right: 0; top: 0; bottom: 0;
+  z-index: 0;
+  background: url('https://cdn.jsdelivr.net/gh/element-plus/element-plus@dev/docs/public/images/element-plus-logo.svg') no-repeat center 60px/180px, linear-gradient(120deg, #f0f4ff 0%, #f8fafc 100%);
+  opacity: 0.18;
+  border-radius: 16px;
+}
+.persona-list-bubble {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  padding: 4px 2px;
+  gap: 14px 18px;
+  padding: 18px 8px 8px 8px;
+  min-height: 120px;
+  align-items: flex-start;
+  justify-content: flex-start;
 }
-
-.persona-bubble {
+.persona-bubble-colored {
   display: inline-flex;
   align-items: center;
-  padding: 7px 14px;
+  padding: 8px 18px;
   border-radius: 999px;
-  font-size: 12px;
-  line-height: 1.2;
+  font-size: 13px;
   font-weight: 600;
-  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.12);
-  border: 1px solid rgba(15, 23, 42, 0.06);
-  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(64, 158, 255, 0.10);
+  background: linear-gradient(120deg, #409eff 60%, #66b1ff 100%);
+  transition: transform 0.18s, box-shadow 0.18s;
+  min-width: 60px;
+  margin-right: 0;
+  word-break: keep-all;
+  white-space: pre;
 }
-
-.persona-bubble:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 14px 26px rgba(15, 23, 42, 0.18);
+.persona-bubble-colored:hover {
+  transform: translateY(-2px) scale(1.04);
+  box-shadow: 0 8px 24px rgba(64, 158, 255, 0.18);
+}
+.persona-summary-bold {
+  font-size: 14px;
+  font-weight: 700;
+  color: #222;
+  margin-bottom: 8px;
+  margin-top: 2px;
+}
+.persona-bottom-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: auto;
+}
+.persona-tip-bottom {
+  font-size: 12px;
+  color: #b0b3b8;
+  margin: 0;
+}
+.persona-clear-btn {
+  margin-left: 12px;
 }
 
 .persona-empty {
