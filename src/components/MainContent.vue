@@ -56,7 +56,7 @@
             </div>
             <el-input
               v-model="newTaskTitle"
-              :placeholder="inputPlaceholder"
+              :placeholder="inputPlaceholderShort"
               @keyup.enter="handleAddTask"
               class="task-input"
             >
@@ -282,6 +282,13 @@ const inputPlaceholder = computed(() => {
   return '输入任务，回车创建'
 })
 
+const inputPlaceholderShort = computed(() => {
+  if (agentEnabled.value) {
+    return '告诉 Agent 你的需求...'
+  }
+  return '输入任务...'
+})
+
 watch(
   () => userStore.token,
   async (token) => {
@@ -416,6 +423,16 @@ function parseQuickTask(raw: string) {
   return { title, date }
 }
 
+function parseReschedule(raw: string) {
+  const text = raw.trim()
+  const match = text.match(/^(将|把)?(.+?)(移动到|改到|改为|调整到|移到)(.+)$/)
+  if (!match) return null
+  const title = match[2].trim()
+  const dateText = match[4].trim()
+  const parsed = parseQuickTask(dateText)
+  return { title, date: parsed.date }
+}
+
 function extractDeleteTitle(raw: string) {
   return raw
     .replace(/^(删除|移除|清理)/, '')
@@ -462,6 +479,16 @@ async function handleAddTask() {
       const prompt = newTaskTitle.value.trim()
       newTaskTitle.value = ''
       try {
+        const reschedule = parseReschedule(prompt)
+        if (reschedule?.title && reschedule.date) {
+          const match = taskStore.tasks.find(t => t.title === reschedule.title)
+          if (match) {
+            await taskStore.updateTask(match.id, { date: reschedule.date })
+            ElMessage.success('已更新任务日期')
+            agentProcessing.value = false
+            return
+          }
+        }
         if (await tryQuickDelete(prompt)) {
           agentProcessing.value = false
           return
@@ -684,6 +711,15 @@ async function handleHardDeleteTask(task: Task) {
   background: transparent;
   padding: 10px 10px 10px 6px;
   font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.task-input :deep(.el-input__inner::placeholder) {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .task-input :deep(.el-input__prefix) {
