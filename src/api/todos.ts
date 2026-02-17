@@ -46,6 +46,11 @@ export async function apiGetAllTodos() {
   return extractData(data, [])
 }
 
+export async function apiGetActiveTodos() {
+  const { data } = await http.get<ApiResponse<TodoDTO[]> | TodoDTO[]>('/todos/active')
+  return extractData(data, [])
+}
+
 export async function apiGetTodayTodos() {
   const { data } = await http.get<ApiResponse<TodoDTO[]> | TodoDTO[]>('/todos/today')
   return extractData(data, [])
@@ -63,6 +68,11 @@ export async function apiGetInboxTodos() {
 
 export async function apiGetTodosByList(listName: string) {
   const { data } = await http.get<ApiResponse<TodoDTO[]> | TodoDTO[]>(`/todos/list/${encodeURIComponent(listName)}`)
+  return extractData(data, [])
+}
+
+export async function apiGetActiveTodosByList(listName: string) {
+  const { data } = await http.get<ApiResponse<TodoDTO[]> | TodoDTO[]>(`/todos/list/${encodeURIComponent(listName)}/active`)
   return extractData(data, [])
 }
 

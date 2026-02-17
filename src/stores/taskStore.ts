@@ -8,11 +8,13 @@ import {
   apiGetDeletedTodos,
   apiGetCompletedTodos,
   apiGetAllTodos,
+  apiGetActiveTodos,
   apiGetInboxTodos,
   apiGetNext7DaysTodos,
   apiGetTodayTodos,
   apiGetTodoLists,
   apiGetTodosByList,
+  apiGetActiveTodosByList,
   apiHardDeleteTodo,
   apiPatchTodo,
   apiRestoreTodo,
@@ -132,9 +134,13 @@ export const useTaskStore = defineStore('task', () => {
           break
         case 'list':
           if (currentListName.value) {
-            list = await apiGetTodosByList(currentListName.value)
+            list = hideCompleted.value
+              ? await apiGetActiveTodosByList(currentListName.value)
+              : await apiGetTodosByList(currentListName.value)
           } else {
-            list = await apiGetAllTodos()
+            list = hideCompleted.value
+              ? await apiGetActiveTodos()
+              : await apiGetAllTodos()
           }
           break
         case 'trash':
@@ -145,7 +151,9 @@ export const useTaskStore = defineStore('task', () => {
           break
         case 'all':
         default:
-          list = await apiGetAllTodos()
+          list = hideCompleted.value
+            ? await apiGetActiveTodos()
+            : await apiGetAllTodos()
           break
       }
     } catch (err: unknown) {
@@ -705,6 +713,7 @@ export const useTaskStore = defineStore('task', () => {
 
   function toggleHideCompleted() {
     hideCompleted.value = !hideCompleted.value
+    void fetchTodosForCurrentFilter()
   }
 
   function formatTaskDate(task: Task): string {
