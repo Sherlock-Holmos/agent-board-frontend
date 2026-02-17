@@ -97,6 +97,13 @@ export const useTaskStore = defineStore('task', () => {
       checklist: todo.listName || '收集箱',
       priority,
       tags: todo.tags ? todo.tags.split(',').map(t => t.trim()).filter(Boolean) : undefined,
+      estimatedMinutes: todo.estimatedMinutes ?? null,
+      effortLevel: todo.effortLevel,
+      context: todo.context,
+      location: todo.location,
+      energyRequired: todo.energyRequired,
+      deadlineStrict: todo.deadlineStrict ?? false,
+      importanceWeight: todo.importanceWeight ?? null,
       important,
       urgent
     }
@@ -331,7 +338,14 @@ export const useTaskStore = defineStore('task', () => {
       dueDate: task.date ? task.date.toISOString().split('T')[0] : null,
       listName: task.checklist,
       priority: (task.priority ?? toQuadrantPriority(task.important, task.urgent))?.toUpperCase(),
-      tags: task.tags ? task.tags.join(',') : undefined
+      tags: task.tags ? task.tags.join(',') : undefined,
+      estimatedMinutes: task.estimatedMinutes ?? null,
+      effortLevel: task.effortLevel,
+      context: task.context,
+      location: task.location,
+      energyRequired: task.energyRequired,
+      deadlineStrict: task.deadlineStrict ?? false,
+      importanceWeight: task.importanceWeight ?? null
     }
 
     const created = await apiCreateTodo(payload)
@@ -461,6 +475,34 @@ export const useTaskStore = defineStore('task', () => {
       if (nextTags !== currentTags) {
         payload.tags = nextTags
       }
+    }
+
+    if (updates.estimatedMinutes !== undefined && updates.estimatedMinutes !== task.estimatedMinutes) {
+      payload.estimatedMinutes = updates.estimatedMinutes
+    }
+
+    if (updates.effortLevel !== undefined && updates.effortLevel !== task.effortLevel) {
+      payload.effortLevel = updates.effortLevel
+    }
+
+    if (updates.context !== undefined && updates.context !== task.context) {
+      payload.context = updates.context
+    }
+
+    if (updates.location !== undefined && updates.location !== task.location) {
+      payload.location = updates.location
+    }
+
+    if (updates.energyRequired !== undefined && updates.energyRequired !== task.energyRequired) {
+      payload.energyRequired = updates.energyRequired
+    }
+
+    if (updates.deadlineStrict !== undefined && updates.deadlineStrict !== task.deadlineStrict) {
+      payload.deadlineStrict = updates.deadlineStrict
+    }
+
+    if (updates.importanceWeight !== undefined && updates.importanceWeight !== task.importanceWeight) {
+      payload.importanceWeight = updates.importanceWeight
     }
 
     if (Object.keys(payload).length === 0) return

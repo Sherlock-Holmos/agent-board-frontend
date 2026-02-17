@@ -44,6 +44,22 @@
             </div>
           </div>
           <div class="detail-item">
+            <div class="item-label">预估时长</div>
+            <div class="item-value">{{ task?.estimatedMinutes ?? '-' }} 分钟</div>
+          </div>
+          <div class="detail-item">
+            <div class="item-label">强度</div>
+            <div class="item-value">{{ task?.effortLevel || '-' }}</div>
+          </div>
+          <div class="detail-item">
+            <div class="item-label">场景</div>
+            <div class="item-value">{{ task?.context || '-' }}</div>
+          </div>
+          <div class="detail-item">
+            <div class="item-label">能量需求</div>
+            <div class="item-value">{{ task?.energyRequired || '-' }}</div>
+          </div>
+          <div class="detail-item">
             <div class="item-label">状态</div>
             <div class="item-value">
               <el-tag size="small" :type="task?.completed ? 'success' : 'info'" effect="light">
@@ -54,6 +70,14 @@
           <div class="detail-item">
             <div class="item-label">任务类型</div>
             <div class="item-value">个人任务</div>
+          </div>
+          <div class="detail-item">
+            <div class="item-label">硬截止</div>
+            <div class="item-value">{{ task?.deadlineStrict ? '是' : '否' }}</div>
+          </div>
+          <div class="detail-item">
+            <div class="item-label">重要权重</div>
+            <div class="item-value">{{ task?.importanceWeight ?? '-' }}</div>
           </div>
         </div>
 

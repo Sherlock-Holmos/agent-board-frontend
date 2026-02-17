@@ -3,7 +3,7 @@
     <div class="agents-header">
       <div>
         <h2 class="title">Agent 模块预览</h2>
-        <p class="subtitle">选择你喜欢的展示方式，后续再接入真实 Agent 能力。</p>
+        <p class="subtitle">查看对话、计划与画像能力的当前呈现方式。</p>
       </div>
       <el-segmented v-model="active" :options="options" />
     </div>

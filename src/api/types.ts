@@ -26,6 +26,13 @@ export interface TodoDTO {
   updatedAt?: string | Date | null
   deleted?: boolean
   userId?: number
+  estimatedMinutes?: number | null
+  effortLevel?: string
+  context?: string
+  location?: string
+  energyRequired?: string
+  deadlineStrict?: boolean
+  importanceWeight?: number | null
 }
 
 export interface SubtaskDTO {
@@ -98,6 +105,99 @@ export interface TodoUpdateRequest {
   priority?: string
   dueDate?: string | Date | null
   deleted?: boolean
+  estimatedMinutes?: number | null
+  effortLevel?: string
+  context?: string
+  location?: string
+  energyRequired?: string
+  deadlineStrict?: boolean
+  importanceWeight?: number | null
+}
+
+export interface UserProfileDTO {
+  id?: number
+  userId?: number
+  timezone?: string
+  workHours?: string
+  chronotype?: string
+  energyCurve?: string
+  defaultTaskDuration?: number | null
+  focusBlockMinutes?: number | null
+  summary?: string
+  createdAt?: string | Date | null
+  updatedAt?: string | Date | null
+}
+
+export interface UserProfilePolicyDTO {
+  id?: number
+  userId?: number
+  baseWeight?: number | null
+  recentWeight?: number | null
+  createdAt?: string | Date | null
+  updatedAt?: string | Date | null
+}
+
+export interface UserPreferenceDTO {
+  id?: number
+  userId?: number
+  timezone?: string
+  workHours?: string
+  chronotype?: string
+  energyCurve?: string
+  defaultTaskDuration?: number | null
+  focusBlockMinutes?: number | null
+  preferredContexts?: string
+  createdAt?: string | Date | null
+  updatedAt?: string | Date | null
+}
+
+export interface UserAvailabilityDTO {
+  id?: number
+  userId?: number
+  dayOfWeek?: number
+  startTime?: string
+  endTime?: string
+  source?: string
+  createdAt?: string | Date | null
+  updatedAt?: string | Date | null
+}
+
+export interface AgentPlanDTO {
+  id?: number
+  userId?: number
+  planDate?: string | Date | null
+  planJson?: string
+  score?: number | null
+  version?: number
+  createdAt?: string | Date | null
+  updatedAt?: string | Date | null
+}
+
+export interface AgentRecommendationDTO {
+  id?: number
+  planId?: number
+  todoId?: number
+  startAt?: string | Date | null
+  endAt?: string | Date | null
+  reason?: string
+  confidence?: number | null
+  createdAt?: string | Date | null
+}
+
+export interface AgentPlanResponse {
+  plan?: AgentPlanDTO | null
+  recommendations?: AgentRecommendationDTO[]
+}
+
+export interface UserFeedbackDTO {
+  id?: number
+  userId?: number
+  todoId?: number | null
+  planId?: number | null
+  action?: string
+  reason?: string
+  rating?: number | null
+  createdAt?: string | Date | null
 }
 
 export interface UserLoginRequest {

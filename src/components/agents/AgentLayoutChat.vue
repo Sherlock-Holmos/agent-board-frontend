@@ -6,21 +6,13 @@
         <el-tag type="info" effect="light">多轮推理</el-tag>
       </div>
       <div ref="chatBodyRef" class="panel-body">
-        <div class="bubble agent code">
-          <pre><code>// 路由2：将访问 /api/user/** 的请求，负载均衡到另一个服务（假设您以后有user-service）
-.route("user_route", r -&gt; r
-        .path("/api/user/**")
-        .filters(f -&gt; f.stripPrefix(1))
-        .uri("lb://USER-SERVICE")
-)</code></pre>
-        </div>
         <div
           v-for="(msg, index) in messages"
           :key="index"
           class="bubble"
           :class="msg.role"
         >
-          {{ msg.text }}
+          <span v-html="renderMessage(msg.text)"></span>
         </div>
         <div v-if="sending" class="bubble agent typing">
           <span class="dot"></span>
@@ -39,26 +31,12 @@
         <el-button type="default" @click="handleClear" :disabled="sending">清理记录</el-button>
       </div>
     </div>
-    <div class="side">
-      <div class="side-card">
-        <div class="side-title">上下文</div>
-        <div class="side-item">今日任务：8</div>
-        <div class="side-item">未完成：12</div>
-        <div class="side-item">高优先级：3</div>
-      </div>
-      <div class="side-card">
-        <div class="side-title">快捷指令</div>
-        <el-button size="small">生成周报</el-button>
-        <el-button size="small">安排提醒</el-button>
-      </div>
-    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { nextTick, onMounted, ref, watch } from 'vue'
-import { apiExecuteAgent } from '@/api/agent'
-import { loadAgentProfile, saveAgentProfile } from '@/utils/agentProfile'
+import { apiExecuteAgent, apiGetRecentProfile } from '@/api/agent'
 
 const prompt = ref('')
 const messages = ref<Array<{ role: 'user' | 'agent'; text: string }>>([])
@@ -67,6 +45,67 @@ const storageKey = 'agent_chat_messages'
 const profileSummary = ref('')
 const chatBodyRef = ref<HTMLDivElement | null>(null)
 
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+function parseRow(line: string) {
+  return line
+    .split('|')
+    .map(item => item.trim())
+    .filter(item => item.length > 0)
+}
+
+function trimEmptyLines(lines: string[]) {
+  while (lines.length > 0 && lines[0].trim().length === 0) {
+    lines.shift()
+  }
+  while (lines.length > 0 && lines[lines.length - 1].trim().length === 0) {
+    lines.pop()
+  }
+  return lines
+}
+
+function renderMessage(text: string) {
+  const escaped = escapeHtml(text)
+  const lines = trimEmptyLines(escaped.split(/\r?\n/))
+  const parts: string[] = []
+  const separatorPattern = /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?\s*$/
+
+  let i = 0
+  while (i < lines.length) {
+    const line = lines[i]
+    const next = i + 1 < lines.length ? lines[i + 1] : ''
+    if (line.includes('|') && separatorPattern.test(next)) {
+      const headerCells = parseRow(line)
+      i += 2
+      const bodyRows: string[][] = []
+      while (i < lines.length && lines[i].includes('|')) {
+        const rowCells = parseRow(lines[i])
+        if (rowCells.length > 0) {
+          bodyRows.push(rowCells)
+        }
+        i += 1
+      }
+      const headerHtml = headerCells.map(cell => `<th>${cell}</th>`).join('')
+      const bodyHtml = bodyRows
+        .map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`)
+        .join('')
+      parts.push(`<table><thead><tr>${headerHtml}</tr></thead><tbody>${bodyHtml}</tbody></table>`)
+      continue
+    }
+    parts.push(line)
+    i += 1
+  }
+
+  return parts.join('<br>')
+}
+
 onMounted(() => {
   try {
     const raw = localStorage.getItem(storageKey)
@@ -74,8 +113,17 @@ onMounted(() => {
   } catch {
     // ignore parse errors
   }
-  profileSummary.value = loadAgentProfile()
+  void loadProfileSummary()
 })
+
+async function loadProfileSummary() {
+  try {
+    const recent = await apiGetRecentProfile()
+    profileSummary.value = recent.summary?.trim() || ''
+  } catch {
+    profileSummary.value = ''
+  }
+}
 
 watch(
   messages,
@@ -97,13 +145,11 @@ const handleSend = async () => {
   prompt.value = ''
   sending.value = true
   try {
-    const updateProfile = profileSummary.value.trim().length === 0
-    const res = await apiExecuteAgent(text, profileSummary.value, updateProfile)
+    const res = await apiExecuteAgent(text, profileSummary.value, true)
     if (res.status === 'success' && res.response) {
       messages.value.push({ role: 'agent', text: res.response })
       if (res.profile) {
         profileSummary.value = res.profile
-        saveAgentProfile(res.profile)
       }
     } else {
       messages.value.push({ role: 'agent', text: res.error || 'Agent 调用失败' })
@@ -120,14 +166,12 @@ const handleClear = () => {
   messages.value = []
   localStorage.removeItem(storageKey)
 }
+
 </script>
 
 <style scoped>
 .layout-card {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 240px;
-  gap: 16px;
-  align-items: stretch;
+  display: block;
 }
 
 .panel {
@@ -228,20 +272,24 @@ const handleClear = () => {
   animation-delay: 0.4s;
 }
 
-.bubble.code {
-  padding: 0;
-  background: #0f172a;
-  color: #e2e8f0;
+
+.bubble table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  margin: 4px 0;
 }
 
-.bubble.code pre {
-  margin: 0;
-  padding: 10px 12px;
-  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
-  font-size: 12px;
-  line-height: 1.5;
-  white-space: pre;
-  overflow-x: auto;
+.bubble th,
+.bubble td {
+  border: 1px solid #e2e8f0;
+  padding: 6px 8px;
+  text-align: left;
+}
+
+.bubble th {
+  background: #f8fafc;
+  font-weight: 600;
 }
 
 .panel-footer {
@@ -252,31 +300,6 @@ const handleClear = () => {
 
 .panel-footer :deep(.el-input) {
   flex: 1;
-}
-
-.side {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.side-card {
-  border: 1px solid #eef2f7;
-  border-radius: 12px;
-  padding: 12px;
-  background: #fff;
-}
-
-.side-title {
-  font-size: 13px;
-  color: #64748b;
-  margin-bottom: 8px;
-}
-
-.side-item {
-  font-size: 13px;
-  color: #0f172a;
-  margin-bottom: 6px;
 }
 
 @keyframes typing-bounce {

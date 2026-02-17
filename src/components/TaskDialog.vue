@@ -37,6 +37,35 @@
         <el-form-item label="清单">
           <el-input v-model="form.checklist" placeholder="请输入清单名称" />
         </el-form-item>
+        <el-form-item label="预估时长">
+          <el-input v-model.number="form.estimatedMinutes" placeholder="分钟" type="number" />
+        </el-form-item>
+        <el-form-item label="工作强度">
+          <el-select v-model="form.effortLevel" placeholder="请选择强度">
+            <el-option label="低" value="low" />
+            <el-option label="中" value="medium" />
+            <el-option label="高" value="high" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="场景">
+          <el-input v-model="form.context" placeholder="如：需要电脑/电话" />
+        </el-form-item>
+        <el-form-item label="地点">
+          <el-input v-model="form.location" placeholder="可选" />
+        </el-form-item>
+        <el-form-item label="能量需求">
+          <el-select v-model="form.energyRequired" placeholder="请选择能量">
+            <el-option label="低" value="low" />
+            <el-option label="中" value="medium" />
+            <el-option label="高" value="high" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="硬截止">
+          <el-switch v-model="form.deadlineStrict" active-text="是" inactive-text="否" />
+        </el-form-item>
+        <el-form-item label="重要权重">
+          <el-input v-model.number="form.importanceWeight" placeholder="0~100" type="number" />
+        </el-form-item>
         <el-form-item label="标签">
           <el-input v-model="form.tags" placeholder="用逗号分隔标签" />
         </el-form-item>
@@ -172,7 +201,14 @@ const form = ref({
   important: false,
   urgent: false,
   checklist: '收集箱',
-  tags: ''
+  tags: '',
+  estimatedMinutes: null as number | null,
+  effortLevel: '',
+  context: '',
+  location: '',
+  energyRequired: '',
+  deadlineStrict: false,
+  importanceWeight: null as number | null
 })
 
 const subtasks = ref<Subtask[]>([])
@@ -266,7 +302,14 @@ watch(() => props.modelValue, (val) => {
       important: props.task.important ?? false,
       urgent: props.task.urgent ?? false,
       checklist: props.task.checklist,
-      tags: props.task.tags?.join(', ') ?? ''
+      tags: props.task.tags?.join(', ') ?? '',
+      estimatedMinutes: props.task.estimatedMinutes ?? null,
+      effortLevel: props.task.effortLevel ?? '',
+      context: props.task.context ?? '',
+      location: props.task.location ?? '',
+      energyRequired: props.task.energyRequired ?? '',
+      deadlineStrict: props.task.deadlineStrict ?? false,
+      importanceWeight: props.task.importanceWeight ?? null
     }
     subtasks.value = []
     reminders.value = []
@@ -295,7 +338,14 @@ watch(() => props.modelValue, (val) => {
       important: false,
       urgent: false,
       checklist: '收集箱',
-      tags: ''
+      tags: '',
+      estimatedMinutes: null,
+      effortLevel: '',
+      context: '',
+      location: '',
+      energyRequired: '',
+      deadlineStrict: false,
+      importanceWeight: null
     }
     subtasks.value = []
     reminders.value = []
@@ -331,6 +381,13 @@ function handleSave() {
     ...form.value,
     date: form.value.date ? new Date(form.value.date) : null,
     tags: tags.length ? tags : undefined,
+    estimatedMinutes: form.value.estimatedMinutes ?? null,
+    effortLevel: form.value.effortLevel || undefined,
+    context: form.value.context || undefined,
+    location: form.value.location || undefined,
+    energyRequired: form.value.energyRequired || undefined,
+    deadlineStrict: form.value.deadlineStrict ?? false,
+    importanceWeight: form.value.importanceWeight ?? null,
     subtasks: subtasks.value,
     reminders: reminders.value,
     recurrenceRules: recurrenceRules.value,

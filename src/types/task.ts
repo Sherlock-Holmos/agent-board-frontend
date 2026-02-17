@@ -11,6 +11,13 @@ export interface Task {
   recurrenceRules?: RecurrenceRule[]
   attachments?: Attachment[]
   activityLogs?: ActivityLog[]
+  estimatedMinutes?: number | null
+  effortLevel?: string
+  context?: string
+  location?: string
+  energyRequired?: string
+  deadlineStrict?: boolean
+  importanceWeight?: number | null
   // 四象限属性
   important?: boolean  // 重要性
   urgent?: boolean     // 紧急度
