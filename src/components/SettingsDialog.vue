@@ -226,10 +226,6 @@ const aboutSection = computed(() => helpSections.find(section => section.key ===
 const visible = ref(false)
 
 const compact = ref(false)
-const defaultList = ref('收集箱')
-const hideCompleted = ref(false)
-const reminder = ref(true)
-const reminderTime = ref('09:00')
 
 const activeTab = ref<'account' | 'modules' | 'smart' | 'notify' | 'datetime' | 'appearance' | 'more' | 'import' | 'collab' | 'shortcut' | 'about'>('account')
 

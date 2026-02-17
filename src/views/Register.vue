@@ -509,4 +509,35 @@ function goLogin() {
 .footer-link:hover {
   text-decoration: underline;
 }
+
+@media (max-width: 900px) {
+  .header {
+    padding: 16px 20px;
+  }
+
+  .register-card {
+    padding: 32px 20px;
+    margin: 0 16px;
+    max-width: none;
+    border-radius: 12px;
+  }
+
+  .register-title {
+    font-size: 24px;
+    margin-bottom: 16px;
+  }
+
+  .captcha-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .captcha-box {
+    width: 100%;
+  }
+
+  .footer {
+    padding: 20px 0 32px;
+  }
+}
 </style>

@@ -56,6 +56,83 @@
             <div class="item-value">个人任务</div>
           </div>
         </div>
+
+        <div v-if="task?.tags?.length" class="detail-section">
+          <div class="section-title">标签</div>
+          <div class="tag-list">
+            <el-tag v-for="tag in task.tags" :key="tag" size="small" effect="light">{{ tag }}</el-tag>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <div class="section-title">子任务</div>
+          <div v-if="extrasLoading" class="section-muted">加载中...</div>
+          <div v-else-if="subtasks.length === 0" class="section-muted">暂无子任务</div>
+          <div v-else class="subtask-list">
+            <div v-for="item in subtasks" :key="item.id ?? item.title" class="subtask-row">
+              <el-checkbox :model-value="item.completed" disabled />
+              <span :class="{ completed: item.completed }">{{ item.title }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <div class="section-title">提醒</div>
+          <div v-if="extrasLoading" class="section-muted">加载中...</div>
+          <div v-else-if="reminders.length === 0" class="section-muted">暂无提醒</div>
+          <div v-else class="reminder-list">
+            <div v-for="item in reminders" :key="item.id ?? String(item.remindAt)" class="reminder-row">
+              <span class="reminder-time">{{ formatReminder(item.remindAt) }}</span>
+              <el-tag size="small" effect="plain">{{ item.channel || 'app' }}</el-tag>
+            </div>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <div class="section-title">重复规则</div>
+          <div v-if="extrasLoading" class="section-muted">加载中...</div>
+          <div v-else-if="recurrenceRules.length === 0" class="section-muted">暂无重复规则</div>
+          <div v-else class="rule-list">
+            <div v-for="item in recurrenceRules" :key="item.id ?? item.rrule" class="rule-row">
+              <span class="rule-text">{{ item.rrule }}</span>
+              <span class="rule-meta">{{ item.timezone || 'Asia/Shanghai' }}</span>
+              <el-tag size="small" :type="item.active ? 'success' : 'info'" effect="plain">
+                {{ item.active ? '启用' : '停用' }}
+              </el-tag>
+            </div>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <div class="section-title">附件</div>
+          <div v-if="extrasLoading" class="section-muted">加载中...</div>
+          <div v-else-if="attachments.length === 0" class="section-muted">暂无附件</div>
+          <div v-else class="attachment-list">
+            <div v-for="item in attachments" :key="item.id ?? item.url" class="attachment-row">
+              <a :href="item.url" class="attachment-link" target="_blank" rel="noreferrer">{{ item.filename }}</a>
+              <span class="attachment-meta">{{ item.mimeType || '-' }}</span>
+              <span class="attachment-meta">{{ item.sizeBytes ?? '-' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <div class="section-title">动态日志</div>
+          <div v-if="extrasLoading" class="section-muted">加载中...</div>
+          <div v-else-if="activityLogs.length === 0" class="section-muted">暂无日志</div>
+          <div v-else class="log-list">
+            <div v-for="item in activityLogs" :key="item.id ?? item.action" class="log-row">
+              <span class="log-action">{{ item.action }}</span>
+              <span class="log-payload">{{ item.payload || '-' }}</span>
+              <span class="log-time">{{ item.createdAt ? formatReminder(item.createdAt) : '-' }}</span>
+            </div>
+          </div>
+          <div class="log-add">
+            <el-input v-model="newLogAction" placeholder="动作" size="small" />
+            <el-input v-model="newLogPayload" placeholder="内容" size="small" />
+            <el-button size="small" :loading="logSubmitting" @click="handleAddLog">添加</el-button>
+          </div>
+        </div>
       </template>
 
       <template v-else>
@@ -117,7 +194,8 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { Close } from '@element-plus/icons-vue'
-import type { Task } from '@/types/task'
+import { apiGetReminders, apiGetSubtasks, apiGetRecurrenceRules, apiGetAttachments, apiGetActivityLogs, apiCreateActivityLog } from '@/api/todos'
+import type { Task, Subtask, Reminder, RecurrenceRule, Attachment, ActivityLog } from '@/types/task'
 
 const props = defineProps<{
   modelValue: boolean
@@ -132,6 +210,16 @@ const emit = defineEmits<{
 
 const visible = ref(false)
 const isEditing = ref(false)
+const extrasLoading = ref(false)
+const subtasks = ref<Subtask[]>([])
+const reminders = ref<Reminder[]>([])
+const recurrenceRules = ref<RecurrenceRule[]>([])
+const attachments = ref<Attachment[]>([])
+const activityLogs = ref<ActivityLog[]>([])
+const extrasTaskId = ref<number | null>(null)
+const newLogAction = ref('')
+const newLogPayload = ref('')
+const logSubmitting = ref(false)
 
 const form = ref({
   title: '',
@@ -153,6 +241,76 @@ const formattedDate = computed(() => {
   })
 })
 
+function formatReminder(value: Date | string) {
+  const date = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(date.getTime())) return '-'
+  return date.toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
+async function loadExtras(taskId: number) {
+  extrasLoading.value = true
+  extrasTaskId.value = taskId
+  try {
+    const [subtaskDtos, reminderDtos, ruleDtos, attachmentDtos, logDtos] = await Promise.all([
+      apiGetSubtasks(taskId),
+      apiGetReminders(taskId),
+      apiGetRecurrenceRules(taskId),
+      apiGetAttachments(taskId),
+      apiGetActivityLogs(taskId)
+    ])
+    if (extrasTaskId.value !== taskId) return
+    subtasks.value = subtaskDtos.map(item => ({
+      id: item.id != null ? String(item.id) : undefined,
+      title: item.title,
+      completed: item.completed ?? false,
+      sortOrder: item.sortOrder ?? 0
+    }))
+    reminders.value = reminderDtos.map(item => ({
+      id: item.id != null ? String(item.id) : undefined,
+      remindAt: item.remindAt,
+      channel: item.channel,
+      status: item.status
+    }))
+    recurrenceRules.value = ruleDtos.map(item => ({
+      id: item.id != null ? String(item.id) : undefined,
+      rrule: item.rrule ?? '',
+      timezone: item.timezone ?? 'Asia/Shanghai',
+      nextRunAt: item.nextRunAt ?? null,
+      active: item.active ?? true
+    }))
+    attachments.value = attachmentDtos.map(item => ({
+      id: item.id != null ? String(item.id) : undefined,
+      filename: item.filename ?? '',
+      url: item.url ?? '',
+      mimeType: item.mimeType ?? '',
+      sizeBytes: item.sizeBytes ?? undefined
+    }))
+    activityLogs.value = logDtos.map(item => ({
+      id: item.id != null ? String(item.id) : undefined,
+      action: item.action ?? '',
+      payload: item.payload ?? '',
+      createdAt: item.createdAt ?? null
+    }))
+  } catch {
+    if (extrasTaskId.value !== taskId) return
+    subtasks.value = []
+    reminders.value = []
+    recurrenceRules.value = []
+    attachments.value = []
+    activityLogs.value = []
+  } finally {
+    if (extrasTaskId.value === taskId) {
+      extrasLoading.value = false
+    }
+  }
+}
+
 watch(
   () => props.modelValue,
   (val) => {
@@ -167,9 +325,48 @@ watch(
         checklist: props.task.checklist,
         completed: props.task.completed
       }
+      const numericId = Number(props.task.id)
+      if (!Number.isNaN(numericId)) {
+        void loadExtras(numericId)
+      } else {
+        subtasks.value = []
+        reminders.value = []
+        recurrenceRules.value = []
+        attachments.value = []
+        activityLogs.value = []
+      }
+    }
+    if (!val) {
+      extrasTaskId.value = null
+      extrasLoading.value = false
+      subtasks.value = []
+      reminders.value = []
+      recurrenceRules.value = []
+      attachments.value = []
+      activityLogs.value = []
+      newLogAction.value = ''
+      newLogPayload.value = ''
     }
   }
 )
+
+async function handleAddLog() {
+  if (!props.task) return
+  const action = newLogAction.value.trim()
+  const payload = newLogPayload.value.trim()
+  if (!action) return
+  const todoId = Number(props.task.id)
+  if (Number.isNaN(todoId)) return
+  try {
+    logSubmitting.value = true
+    await apiCreateActivityLog(todoId, { action, payload })
+    newLogAction.value = ''
+    newLogPayload.value = ''
+    await loadExtras(todoId)
+  } finally {
+    logSubmitting.value = false
+  }
+}
 
 watch(visible, (val) => {
   emit('update:modelValue', val)
@@ -302,6 +499,117 @@ function handleDelete() {
   display: flex;
   justify-content: flex-end;
   margin-top: 16px;
+}
+
+.detail-section {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.section-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.section-muted {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.subtask-list,
+.reminder-list,
+.rule-list,
+.attachment-list,
+.log-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.subtask-row,
+.reminder-row,
+.rule-row,
+.attachment-row,
+.log-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #334155;
+}
+
+.subtask-row .completed {
+  color: #94a3b8;
+  text-decoration: line-through;
+}
+
+.reminder-time {
+  font-variant-numeric: tabular-nums;
+}
+
+.rule-text {
+  flex: 1;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 11px;
+  color: #0f172a;
+}
+
+.rule-meta {
+  color: #94a3b8;
+}
+
+.attachment-row {
+  justify-content: space-between;
+}
+
+.attachment-link {
+  color: #2563eb;
+  text-decoration: none;
+}
+
+.attachment-link:hover {
+  text-decoration: underline;
+}
+
+.attachment-meta {
+  color: #94a3b8;
+}
+
+.log-row {
+  display: grid;
+  grid-template-columns: 120px 1fr 160px;
+  gap: 8px;
+  align-items: center;
+}
+
+.log-action {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.log-payload {
+  color: #64748b;
+}
+
+.log-time {
+  color: #94a3b8;
+  font-variant-numeric: tabular-nums;
+}
+
+.log-add {
+  display: grid;
+  grid-template-columns: 120px 1fr auto;
+  gap: 8px;
+  align-items: center;
 }
 
 .detail-form :deep(.el-input__wrapper),

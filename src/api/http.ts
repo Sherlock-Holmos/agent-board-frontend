@@ -11,7 +11,7 @@ function resolveApiBaseUrl(raw?: string) {
 
 export const http = axios.create({
   baseURL: resolveApiBaseUrl(API_BASE_URL),
-  timeout: 60000
+  timeout: 120000
 })
 
 http.interceptors.request.use((config) => {

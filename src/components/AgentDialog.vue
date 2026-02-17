@@ -259,7 +259,8 @@ async function handleSend() {
   prompt.value = ''
   sending.value = true
   try {
-    const res = await apiExecuteAgent(text, profileSummary.value)
+    const updateProfile = profileSummary.value.trim().length === 0
+    const res = await apiExecuteAgent(text, profileSummary.value, updateProfile)
     if (res.status === 'success' && res.response) {
       messages.value.push({ role: 'agent', text: res.response })
       if (res.profile) {

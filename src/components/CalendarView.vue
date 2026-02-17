@@ -234,7 +234,6 @@ const calendarCells = computed(() => {
   const month = base.getMonth()
 
   const firstDay = new Date(year, month, 1)
-  const lastDay = new Date(year, month + 1, 0)
 
   const startOffset = (firstDay.getDay() + 6) % 7 // 周一为0
   const startDate = new Date(year, month, 1 - startOffset)

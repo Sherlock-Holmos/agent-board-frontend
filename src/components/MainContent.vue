@@ -119,7 +119,7 @@
                         :task="task"
                         @toggle="(val) => handleToggleTask(task.id, val)"
                         @edit="() => handleEditTask(task)"
-                        @view="() => handleEditTask(task)"
+                        @view="() => handleViewTask(task)"
                       />
                     </div>
                   </div>
@@ -146,7 +146,7 @@
                       :task="task"
                       @toggle="(val) => handleToggleTask(task.id, val)"
                       @edit="() => handleEditTask(task)"
-                      @view="() => handleEditTask(task)"
+                      @view="() => handleViewTask(task)"
                     />
                     <div v-if="getQuadrantCompletedTasks(quadrant.type).length >= 5" class="view-more">
                       <a href="#" @click.prevent>查看更多</a>
@@ -193,7 +193,7 @@
           :trash-mode="currentFilter === 'trash'"
           @toggle="(val) => handleToggleTask(task.id, val)"
           @edit="() => handleEditTask(task)"
-          @view="() => handleEditTask(task)"
+          @view="() => handleViewTask(task)"
           @restore="() => handleRestoreTask(task)"
           @hard-delete="() => handleHardDeleteTask(task)"
         />
@@ -219,6 +219,12 @@
       @save="handleSaveTask"
       @delete="handleDeleteTask"
     />
+    <task-detail-dialog
+      v-model="detailDialogVisible"
+      :task="viewingTask"
+      @save="handleSaveTask"
+      @delete="handleDeleteTask"
+    />
   </div>
 </template>
 
@@ -232,6 +238,7 @@ import { ElMessage } from 'element-plus'
 import { apiExecuteAgent } from '@/api/agent'
 import TaskItem from './TaskItem.vue'
 import TaskDialog from './TaskDialog.vue'
+import TaskDetailDialog from './TaskDetailDialog.vue'
 import CalendarView from './CalendarView.vue'
 import PomodoroView from './PomodoroView.vue'
 import type { QuadrantType, Task } from '@/types/task'
@@ -244,7 +251,9 @@ const floatingOpen = ref(false)
 const collapsedGroups = reactive<Record<string, boolean>>({})
 const collapsedQuadrants = reactive<Record<string, boolean>>({})
 const editingTask = ref<Task | null>(null)
+const viewingTask = ref<Task | null>(null)
 const dialogVisible = ref(false)
+const detailDialogVisible = ref(false)
 const isCreatingTask = ref(false)
 const agentProcessing = ref(false)
 
@@ -337,19 +346,19 @@ function getQuadrantTasksGrouped(quadrantType: QuadrantType) {
   const quadrant = tasksByQuadrant.value[quadrantType]
   const allTasks = [...quadrant.pending, ...quadrant.completed]
   const grouped = taskStore.groupTasksByDateAndStatus(allTasks)
-  
+
   // 对日期进行排序：无日期在前，然后按日期倒序
   const sortedKeys = Object.keys(grouped).sort((a, b) => {
     if (a === '无日期') return -1
     if (b === '无日期') return 1
     return b.localeCompare(a)
   })
-  
+
   const sorted: Record<string, { completed: Task[], pending: Task[] }> = {}
   sortedKeys.forEach(key => {
     sorted[key] = grouped[key]
   })
-  
+
   return sorted
 }
 
@@ -502,7 +511,7 @@ async function handleAddTask() {
             urgent: false
           })
         } else {
-          const res = await apiExecuteAgent(prompt)
+          const res = await apiExecuteAgent(prompt, undefined, false)
           if (res.status !== 'success') {
             ElMessage.error(res.error || 'Agent 处理失败')
           }
@@ -547,21 +556,44 @@ function handleEditTask(task: Task) {
   dialogVisible.value = true
 }
 
-function handleSaveTask(updates: Partial<Task>) {
-  if (editingTask.value) {
-    taskStore.updateTask(editingTask.value.id, updates)
-    return
-  }
-  if (isCreatingTask.value) {
-    taskStore.addTask({
-      title: updates.title?.trim() || '未命名任务',
-      completed: updates.completed ?? false,
-      date: updates.date ?? null,
-      checklist: updates.checklist || '收集箱',
-      important: updates.important ?? false,
-      urgent: updates.urgent ?? false
-    })
-    isCreatingTask.value = false
+function handleViewTask(task: Task) {
+  viewingTask.value = task
+  detailDialogVisible.value = true
+}
+
+async function handleSaveTask(updates: Partial<Task>) {
+  try {
+    if (editingTask.value) {
+      await taskStore.updateTask(editingTask.value.id, updates)
+      await taskStore.syncTaskExtras(editingTask.value.id, {
+        subtasks: updates.subtasks,
+        reminders: updates.reminders,
+        recurrenceRules: updates.recurrenceRules,
+        attachments: updates.attachments
+      })
+      return
+    }
+    if (isCreatingTask.value) {
+      const created = await taskStore.addTask({
+        title: updates.title?.trim() || '未命名任务',
+        completed: updates.completed ?? false,
+        date: updates.date ?? null,
+        checklist: updates.checklist || '收集箱',
+        important: updates.important ?? false,
+        urgent: updates.urgent ?? false,
+        tags: updates.tags
+      })
+      await taskStore.syncTaskExtras(created.id, {
+        subtasks: updates.subtasks,
+        reminders: updates.reminders,
+        recurrenceRules: updates.recurrenceRules,
+        attachments: updates.attachments
+      })
+      isCreatingTask.value = false
+    }
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : '保存任务失败'
+    ElMessage.error(message)
   }
 }
 
@@ -998,6 +1030,46 @@ async function handleHardDeleteTask(task: Task) {
 
 .watermark-item {
   font-size: 32px;
+}
+
+@media (max-width: 900px) {
+  .header {
+    padding: 12px 14px;
+    gap: 10px;
+  }
+
+  .title {
+    font-size: 18px;
+  }
+
+  .task-input-wrapper {
+    padding: 12px 14px;
+  }
+
+  .task-input :deep(.el-input__inner) {
+    white-space: normal;
+  }
+
+  .task-list {
+    padding: 12px 14px 96px;
+  }
+
+  .group-content {
+    padding-left: 12px;
+  }
+
+  .floating-dock {
+    right: 14px;
+    bottom: 88px;
+  }
+
+  .floating-input {
+    width: min(320px, calc(100vw - 32px));
+  }
+
+  .watermark {
+    display: none;
+  }
 }
 
 </style>

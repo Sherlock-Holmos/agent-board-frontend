@@ -538,4 +538,51 @@ function handleHelpCommand(command: string) {
 .quadrant-item.active .quadrant-label {
   color: #409eff;
 }
+
+@media (max-width: 900px) {
+  .sidebar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 72px;
+    flex-direction: row;
+    border-right: none;
+    border-top: 1px solid var(--app-border);
+    background-color: #2c3e50;
+    z-index: 20;
+  }
+
+  .sidebar.compact {
+    width: 100%;
+  }
+
+  .nav-content {
+    display: none;
+  }
+
+  .icon-bar {
+    width: 100%;
+    height: 72px;
+    flex-direction: row;
+    justify-content: space-between;
+    padding: 8px 12px;
+    overflow-x: auto;
+  }
+
+  .icon-group {
+    flex-direction: row;
+    gap: 10px;
+    width: auto;
+  }
+
+  .icon-spacer {
+    display: none;
+  }
+
+  .avatar-icon {
+    margin-bottom: 0;
+  }
+}
 </style>

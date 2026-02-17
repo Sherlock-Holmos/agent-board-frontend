@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { Task, FilterType, QuadrantType } from '@/types/task'
+import type { Task, FilterType, QuadrantType, Subtask, Reminder, RecurrenceRule, Attachment } from '@/types/task'
 import {
   apiCreateTodo,
   apiCompleteTodo,
@@ -16,9 +16,25 @@ import {
   apiHardDeleteTodo,
   apiPatchTodo,
   apiRestoreTodo,
-  apiUncompleteTodo
+  apiUncompleteTodo,
+  apiGetSubtasks,
+  apiCreateSubtask,
+  apiUpdateSubtask,
+  apiDeleteSubtask,
+  apiGetReminders,
+  apiCreateReminder,
+  apiUpdateReminder,
+  apiDeleteReminder,
+  apiGetRecurrenceRules,
+  apiCreateRecurrenceRule,
+  apiUpdateRecurrenceRule,
+  apiDeleteRecurrenceRule,
+  apiGetAttachments,
+  apiCreateAttachment,
+  apiUpdateAttachment,
+  apiDeleteAttachment
 } from '@/api/todos'
-import type { TodoDTO, TodoUpdateRequest } from '@/api/types'
+import type { TodoDTO, TodoUpdateRequest, SubtaskDTO, ReminderDTO, RecurrenceRuleDTO, AttachmentDTO } from '@/api/types'
 
 export const useTaskStore = defineStore('task', () => {
   const tasks = ref<Task[]>([])
@@ -321,6 +337,7 @@ export const useTaskStore = defineStore('task', () => {
     const created = await apiCreateTodo(payload)
     const newTask = mapTodoToTask(created)
     tasks.value.push(newTask)
+    return newTask
   }
 
   async function toggleTask(id: string, completed?: boolean) {
@@ -433,7 +450,7 @@ export const useTaskStore = defineStore('task', () => {
       const nextImportant = updates.important ?? task.important ?? false
       const nextUrgent = updates.urgent ?? task.urgent ?? false
       const nextPriority = toQuadrantPriority(nextImportant, nextUrgent)
-      if (nextPriority !== task.priority) {
+      if (nextPriority && nextPriority !== task.priority) {
         payload.priority = nextPriority.toUpperCase()
       }
     }
@@ -451,6 +468,197 @@ export const useTaskStore = defineStore('task', () => {
     const updated = await apiPatchTodo(numericId, payload)
     const mapped = mapTodoToTask(updated)
     Object.assign(task, mapped)
+    return task
+  }
+
+  function toSubtaskDTO(subtask: Subtask): SubtaskDTO {
+    return {
+      id: subtask.id ? Number(subtask.id) : undefined,
+      title: subtask.title,
+      completed: subtask.completed ?? false,
+      sortOrder: subtask.sortOrder ?? 0
+    }
+  }
+
+  function toReminderDTO(reminder: Reminder): ReminderDTO {
+    const remindAt = reminder.remindAt instanceof Date
+      ? reminder.remindAt.toISOString()
+      : reminder.remindAt
+    return {
+      id: reminder.id ? Number(reminder.id) : undefined,
+      remindAt,
+      channel: reminder.channel,
+      status: reminder.status
+    }
+  }
+
+  function toRecurrenceRuleDTO(rule: RecurrenceRule): RecurrenceRuleDTO {
+    const nextRunAt = rule.nextRunAt instanceof Date
+      ? rule.nextRunAt.toISOString()
+      : rule.nextRunAt
+    return {
+      id: rule.id ? Number(rule.id) : undefined,
+      rrule: rule.rrule,
+      timezone: rule.timezone,
+      nextRunAt,
+      active: rule.active
+    }
+  }
+
+  function toAttachmentDTO(attachment: Attachment): AttachmentDTO {
+    return {
+      id: attachment.id ? Number(attachment.id) : undefined,
+      filename: attachment.filename,
+      url: attachment.url,
+      mimeType: attachment.mimeType,
+      sizeBytes: attachment.sizeBytes
+    }
+  }
+
+  async function syncSubtasks(todoId: number, nextSubtasks?: Subtask[]) {
+    if (!nextSubtasks) return
+    const existing = await apiGetSubtasks(todoId)
+    const existingById = new Map<number, SubtaskDTO>()
+    existing.forEach(item => {
+      if (item.id != null) existingById.set(item.id, item)
+    })
+
+    const nextIds = new Set<number>()
+    for (const subtask of nextSubtasks) {
+      const dto = toSubtaskDTO(subtask)
+      if (dto.id != null) {
+        nextIds.add(dto.id)
+        const current = existingById.get(dto.id)
+        const changed = !current
+          || current.title !== dto.title
+          || (current.completed ?? false) !== (dto.completed ?? false)
+          || (current.sortOrder ?? 0) !== (dto.sortOrder ?? 0)
+        if (changed) {
+          await apiUpdateSubtask(todoId, dto.id, dto)
+        }
+      } else {
+        await apiCreateSubtask(todoId, dto)
+      }
+    }
+
+    for (const current of existing) {
+      if (current.id != null && !nextIds.has(current.id)) {
+        await apiDeleteSubtask(todoId, current.id)
+      }
+    }
+  }
+
+  async function syncReminders(todoId: number, nextReminders?: Reminder[]) {
+    if (!nextReminders) return
+    const existing = await apiGetReminders(todoId)
+    const existingById = new Map<number, ReminderDTO>()
+    existing.forEach(item => {
+      if (item.id != null) existingById.set(item.id, item)
+    })
+
+    const nextIds = new Set<number>()
+    for (const reminder of nextReminders) {
+      const dto = toReminderDTO(reminder)
+      if (dto.id != null) {
+        nextIds.add(dto.id)
+        const current = existingById.get(dto.id)
+        const currentTime = current?.remindAt ? new Date(current.remindAt).toISOString() : null
+        const nextTime = dto.remindAt ? new Date(dto.remindAt).toISOString() : null
+        const changed = !current
+          || currentTime !== nextTime
+          || (current.channel ?? '') !== (dto.channel ?? '')
+          || (current.status ?? '') !== (dto.status ?? '')
+        if (changed) {
+          await apiUpdateReminder(todoId, dto.id, dto)
+        }
+      } else {
+        await apiCreateReminder(todoId, dto)
+      }
+    }
+
+    for (const current of existing) {
+      if (current.id != null && !nextIds.has(current.id)) {
+        await apiDeleteReminder(todoId, current.id)
+      }
+    }
+  }
+
+  async function syncRecurrenceRules(todoId: number, nextRules?: RecurrenceRule[]) {
+    if (!nextRules) return
+    const existing = await apiGetRecurrenceRules(todoId)
+    const existingById = new Map<number, RecurrenceRuleDTO>()
+    existing.forEach(item => {
+      if (item.id != null) existingById.set(item.id, item)
+    })
+
+    const nextIds = new Set<number>()
+    for (const rule of nextRules) {
+      const dto = toRecurrenceRuleDTO(rule)
+      if (dto.id != null) {
+        nextIds.add(dto.id)
+        const current = existingById.get(dto.id)
+        const currentTime = current?.nextRunAt ? new Date(current.nextRunAt).toISOString() : null
+        const nextTime = dto.nextRunAt ? new Date(dto.nextRunAt).toISOString() : null
+        const changed = !current
+          || (current.rrule ?? '') !== (dto.rrule ?? '')
+          || (current.timezone ?? '') !== (dto.timezone ?? '')
+          || currentTime !== nextTime
+          || (current.active ?? true) !== (dto.active ?? true)
+        if (changed) {
+          await apiUpdateRecurrenceRule(todoId, dto.id, dto)
+        }
+      } else {
+        await apiCreateRecurrenceRule(todoId, dto)
+      }
+    }
+
+    for (const current of existing) {
+      if (current.id != null && !nextIds.has(current.id)) {
+        await apiDeleteRecurrenceRule(todoId, current.id)
+      }
+    }
+  }
+
+  async function syncAttachments(todoId: number, nextAttachments?: Attachment[]) {
+    if (!nextAttachments) return
+    const existing = await apiGetAttachments(todoId)
+    const existingById = new Map<number, AttachmentDTO>()
+    existing.forEach(item => {
+      if (item.id != null) existingById.set(item.id, item)
+    })
+
+    const nextIds = new Set<number>()
+    for (const attachment of nextAttachments) {
+      const dto = toAttachmentDTO(attachment)
+      if (dto.id != null) {
+        nextIds.add(dto.id)
+        const current = existingById.get(dto.id)
+        const changed = !current
+          || (current.filename ?? '') !== (dto.filename ?? '')
+          || (current.url ?? '') !== (dto.url ?? '')
+          || (current.mimeType ?? '') !== (dto.mimeType ?? '')
+          || (current.sizeBytes ?? 0) !== (dto.sizeBytes ?? 0)
+        if (changed) {
+          await apiUpdateAttachment(todoId, dto.id, dto)
+        }
+      } else {
+        await apiCreateAttachment(todoId, dto)
+      }
+    }
+
+    for (const current of existing) {
+      if (current.id != null && !nextIds.has(current.id)) {
+        await apiDeleteAttachment(todoId, current.id)
+      }
+    }
+  }
+
+  async function syncTaskExtras(todoId: string, extras: { subtasks?: Subtask[]; reminders?: Reminder[]; recurrenceRules?: RecurrenceRule[]; attachments?: Attachment[] }) {
+    const numericId = Number(todoId)
+    await syncSubtasks(numericId, extras.subtasks)
+    await syncReminders(numericId, extras.reminders)
+    await syncRecurrenceRules(numericId, extras.recurrenceRules)
+    await syncAttachments(numericId, extras.attachments)
   }
 
   function toggleHideCompleted() {
@@ -491,6 +699,7 @@ export const useTaskStore = defineStore('task', () => {
     setFilter,
     setView,
     updateTask,
+    syncTaskExtras,
     formatTaskDate,
     getQuadrantType,
     groupTasksByDateAndStatus,

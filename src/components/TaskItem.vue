@@ -4,7 +4,7 @@
       :model-value="task.completed"
       :disabled="trashMode"
       @click.stop
-      @change="(val) => $emit('toggle', val)"
+      @change="(val: boolean) => $emit('toggle', val)"
       class="task-checkbox"
     />
     <span 
@@ -14,6 +14,10 @@
       {{ task.title }}
     </span>
     <div class="task-meta">
+      <div v-if="visibleTags.length" class="task-tags">
+        <span v-for="tag in visibleTags" :key="tag" class="task-tag">{{ tag }}</span>
+        <span v-if="extraTagCount" class="task-tag">+{{ extraTagCount }}</span>
+      </div>
       <span class="task-checklist">{{ task.checklist }}</span>
       <span v-if="task.date" class="task-date" :class="dateStatus">
         {{ formattedDate }}
@@ -65,6 +69,15 @@ const dateStatus = computed(() => {
   }
   return 'date-future'
 })
+
+const visibleTags = computed(() => {
+  return props.task.tags ? props.task.tags.slice(0, 2) : []
+})
+
+const extraTagCount = computed(() => {
+  const count = props.task.tags ? props.task.tags.length : 0
+  return count > 2 ? count - 2 : 0
+})
 </script>
 
 <style scoped>
@@ -104,6 +117,20 @@ const dateStatus = computed(() => {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+}
+
+.task-tags {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.task-tag {
+  font-size: 11px;
+  color: #64748b;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: #eef2ff;
 }
 
 .task-actions {

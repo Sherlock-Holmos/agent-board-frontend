@@ -5,6 +5,8 @@ import { resolve } from 'path'
 export default defineConfig({
   plugins: [vue()],
   server: {
+    port: 4173,
+    strictPort: true,
     proxy: {
       '/api': {
         target: 'http://localhost:8080',

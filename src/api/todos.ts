@@ -1,5 +1,5 @@
 import { http } from './http'
-import type { ApiResponse, TodoDTO, TodoUpdateRequest } from './types'
+import type { ApiResponse, TodoDTO, TodoUpdateRequest, SubtaskDTO, ReminderDTO, RecurrenceRuleDTO, AttachmentDTO, ActivityLogDTO } from './types'
 
 function extractData<T>(payload: T | ApiResponse<T> | undefined | null, fallback: T): T {
   if (payload && typeof payload === 'object' && 'data' in payload) {
@@ -79,5 +79,91 @@ export async function apiGetDeletedTodos() {
 export async function apiGetCompletedTodos() {
   const { data } = await http.get<ApiResponse<TodoDTO[]> | TodoDTO[]>('/todos/completed')
   return extractData(data, [])
+}
+
+export async function apiGetSubtasks(todoId: number) {
+  const { data } = await http.get<ApiResponse<SubtaskDTO[]> | SubtaskDTO[]>(`/todos/${todoId}/subtasks`)
+  return extractData(data, [])
+}
+
+export async function apiCreateSubtask(todoId: number, payload: SubtaskDTO) {
+  const { data } = await http.post<ApiResponse<SubtaskDTO> | SubtaskDTO>(`/todos/${todoId}/subtasks`, payload)
+  return extractData(data, {} as SubtaskDTO)
+}
+
+export async function apiUpdateSubtask(todoId: number, subtaskId: number, payload: SubtaskDTO) {
+  const { data } = await http.patch<ApiResponse<SubtaskDTO> | SubtaskDTO>(`/todos/${todoId}/subtasks/${subtaskId}`, payload)
+  return extractData(data, {} as SubtaskDTO)
+}
+
+export async function apiDeleteSubtask(todoId: number, subtaskId: number) {
+  await http.delete(`/todos/${todoId}/subtasks/${subtaskId}`)
+}
+
+export async function apiGetReminders(todoId: number) {
+  const { data } = await http.get<ApiResponse<ReminderDTO[]> | ReminderDTO[]>(`/todos/${todoId}/reminders`)
+  return extractData(data, [])
+}
+
+export async function apiCreateReminder(todoId: number, payload: ReminderDTO) {
+  const { data } = await http.post<ApiResponse<ReminderDTO> | ReminderDTO>(`/todos/${todoId}/reminders`, payload)
+  return extractData(data, {} as ReminderDTO)
+}
+
+export async function apiUpdateReminder(todoId: number, reminderId: number, payload: ReminderDTO) {
+  const { data } = await http.patch<ApiResponse<ReminderDTO> | ReminderDTO>(`/todos/${todoId}/reminders/${reminderId}`, payload)
+  return extractData(data, {} as ReminderDTO)
+}
+
+export async function apiDeleteReminder(todoId: number, reminderId: number) {
+  await http.delete(`/todos/${todoId}/reminders/${reminderId}`)
+}
+
+export async function apiGetRecurrenceRules(todoId: number) {
+  const { data } = await http.get<ApiResponse<RecurrenceRuleDTO[]> | RecurrenceRuleDTO[]>(`/todos/${todoId}/recurrence-rules`)
+  return extractData(data, [])
+}
+
+export async function apiCreateRecurrenceRule(todoId: number, payload: RecurrenceRuleDTO) {
+  const { data } = await http.post<ApiResponse<RecurrenceRuleDTO> | RecurrenceRuleDTO>(`/todos/${todoId}/recurrence-rules`, payload)
+  return extractData(data, {} as RecurrenceRuleDTO)
+}
+
+export async function apiUpdateRecurrenceRule(todoId: number, ruleId: number, payload: RecurrenceRuleDTO) {
+  const { data } = await http.patch<ApiResponse<RecurrenceRuleDTO> | RecurrenceRuleDTO>(`/todos/${todoId}/recurrence-rules/${ruleId}`, payload)
+  return extractData(data, {} as RecurrenceRuleDTO)
+}
+
+export async function apiDeleteRecurrenceRule(todoId: number, ruleId: number) {
+  await http.delete(`/todos/${todoId}/recurrence-rules/${ruleId}`)
+}
+
+export async function apiGetAttachments(todoId: number) {
+  const { data } = await http.get<ApiResponse<AttachmentDTO[]> | AttachmentDTO[]>(`/todos/${todoId}/attachments`)
+  return extractData(data, [])
+}
+
+export async function apiCreateAttachment(todoId: number, payload: AttachmentDTO) {
+  const { data } = await http.post<ApiResponse<AttachmentDTO> | AttachmentDTO>(`/todos/${todoId}/attachments`, payload)
+  return extractData(data, {} as AttachmentDTO)
+}
+
+export async function apiUpdateAttachment(todoId: number, attachmentId: number, payload: AttachmentDTO) {
+  const { data } = await http.patch<ApiResponse<AttachmentDTO> | AttachmentDTO>(`/todos/${todoId}/attachments/${attachmentId}`, payload)
+  return extractData(data, {} as AttachmentDTO)
+}
+
+export async function apiDeleteAttachment(todoId: number, attachmentId: number) {
+  await http.delete(`/todos/${todoId}/attachments/${attachmentId}`)
+}
+
+export async function apiGetActivityLogs(todoId: number) {
+  const { data } = await http.get<ApiResponse<ActivityLogDTO[]> | ActivityLogDTO[]>(`/todos/${todoId}/activity-logs`)
+  return extractData(data, [])
+}
+
+export async function apiCreateActivityLog(todoId: number, payload: ActivityLogDTO) {
+  const { data } = await http.post<ApiResponse<ActivityLogDTO> | ActivityLogDTO>(`/todos/${todoId}/activity-logs`, payload)
+  return extractData(data, {} as ActivityLogDTO)
 }
 

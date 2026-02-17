@@ -23,4 +23,11 @@ const currentView = computed(() => taskStore.currentView)
   overflow: hidden;
   background-color: var(--app-bg);
 }
+
+@media (max-width: 900px) {
+  .app-container {
+    flex-direction: column;
+    padding-bottom: 72px;
+  }
+}
 </style>
