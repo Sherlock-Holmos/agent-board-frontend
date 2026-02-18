@@ -18,6 +18,8 @@ export interface TodoDTO {
   isCompleted?: boolean
   priority?: string
   dueDate?: string | Date | null
+  dueAt?: string | Date | null
+  clearDueDate?: boolean
   date?: string | Date | null
   todoDate?: string | Date | null
   important?: boolean
@@ -104,6 +106,7 @@ export interface TodoUpdateRequest {
   completed?: boolean
   priority?: string
   dueDate?: string | Date | null
+  dueAt?: string | Date | null
   deleted?: boolean
   estimatedMinutes?: number | null
   effortLevel?: string

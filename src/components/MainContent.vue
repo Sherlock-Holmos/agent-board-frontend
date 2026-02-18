@@ -563,9 +563,10 @@ function handleViewTask(task: Task) {
 
 async function handleSaveTask(updates: Partial<Task>) {
   try {
-    if (editingTask.value) {
-      await taskStore.updateTask(editingTask.value.id, updates)
-      await taskStore.syncTaskExtras(editingTask.value.id, {
+    const targetTask = editingTask.value ?? viewingTask.value
+    if (targetTask) {
+      await taskStore.updateTask(targetTask.id, updates)
+      await taskStore.syncTaskExtras(targetTask.id, {
         subtasks: updates.subtasks,
         reminders: updates.reminders,
         recurrenceRules: updates.recurrenceRules,
@@ -578,6 +579,7 @@ async function handleSaveTask(updates: Partial<Task>) {
         title: updates.title?.trim() || '未命名任务',
         completed: updates.completed ?? false,
         date: updates.date ?? null,
+        dueAt: updates.dueAt ?? null,
         checklist: updates.checklist || '收集箱',
         important: updates.important ?? false,
         urgent: updates.urgent ?? false,

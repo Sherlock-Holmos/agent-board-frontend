@@ -48,17 +48,46 @@ export const useTaskStore = defineStore('task', () => {
   const listNames = ref<string[]>([])
   const currentView = ref<'normal' | 'quadrant' | 'calendar' | 'pomodoro'>('normal')
   const hideCompleted = ref(false)
+  const HIDE_COMPLETED_KEY = 'hideCompleted'
+
+  try {
+    const saved = localStorage.getItem(HIDE_COMPLETED_KEY)
+    if (saved != null) {
+      hideCompleted.value = saved === 'true'
+    }
+  } catch {
+    // ignore storage errors
+  }
 
   function toDate(value?: string | Date | null) {
     if (!value) return null
-    const date = value instanceof Date ? value : new Date(value)
+    if (value instanceof Date) {
+      return Number.isNaN(value.getTime()) ? null : value
+    }
+    const trimmed = value.trim()
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+      const dateOnly = new Date(`${trimmed}T00:00:00`)
+      return Number.isNaN(dateOnly.getTime()) ? null : dateOnly
+    }
+    const date = new Date(trimmed)
     return Number.isNaN(date.getTime()) ? null : date
+  }
+
+  function toLocalDateTime(value: Date) {
+    const pad = (num: number) => String(num).padStart(2, '0')
+    return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}T${pad(value.getHours())}:${pad(value.getMinutes())}:${pad(value.getSeconds())}`
+  }
+
+  function toLocalDate(value: Date) {
+    const pad = (num: number) => String(num).padStart(2, '0')
+    return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}`
   }
 
   function mapTodoToTask(todo: TodoDTO): Task {
     const title = todo.title || todo.name || ''
     const completed = todo.completed ?? todo.isCompleted ?? false
-    const date = toDate(todo.dueDate || todo.date || todo.todoDate)
+    const date = toDate(todo.dueAt || todo.dueDate || todo.date || todo.todoDate)
+    const dueAt = toDate(todo.dueAt)
     const rawPriority = (todo.priority ?? '').toString().toUpperCase()
     let priority: Task['priority'] | undefined
 
@@ -96,6 +125,7 @@ export const useTaskStore = defineStore('task', () => {
       title,
       completed,
       date,
+      dueAt,
       checklist: todo.listName || '收集箱',
       priority,
       tags: todo.tags ? todo.tags.split(',').map(t => t.trim()).filter(Boolean) : undefined,
@@ -339,11 +369,13 @@ export const useTaskStore = defineStore('task', () => {
   })
 
   async function addTask(task: Omit<Task, 'id'>) {
+    const baseDate = task.date ?? task.dueAt ?? null
     const payload: TodoDTO = {
       title: task.title,
       description: undefined,
       completed: task.completed,
-      dueDate: task.date ? task.date.toISOString().split('T')[0] : null,
+      dueDate: baseDate ? toLocalDate(baseDate) : null,
+      dueAt: task.dueAt ? toLocalDateTime(task.dueAt) : null,
       listName: task.checklist,
       priority: (task.priority ?? toQuadrantPriority(task.important, task.urgent))?.toUpperCase(),
       tags: task.tags ? task.tags.join(',') : undefined,
@@ -452,11 +484,18 @@ export const useTaskStore = defineStore('task', () => {
       payload.completed = updates.completed
     }
 
-    if (updates.date !== undefined) {
-      const nextDate = updates.date ? updates.date.toISOString().split('T')[0] : null
-      const currentDate = task.date ? task.date.toISOString().split('T')[0] : null
-      if (nextDate !== currentDate) {
+    if (updates.date !== undefined || updates.dueAt !== undefined) {
+      const nextDateSource = updates.date ?? updates.dueAt ?? null
+      const nextDate = nextDateSource ? toLocalDate(nextDateSource) : null
+      const currentDate = task.date ? toLocalDate(task.date) : null
+      const nextDateTime = updates.dueAt ? toLocalDateTime(updates.dueAt) : null
+      const currentDateTime = task.dueAt ? toLocalDateTime(task.dueAt) : null
+      if (nextDate !== currentDate || nextDateTime !== currentDateTime) {
         payload.dueDate = nextDate
+        payload.dueAt = nextDateTime
+        if (!nextDate && (currentDate || currentDateTime)) {
+          payload.clearDueDate = true
+        }
       }
     }
 
@@ -713,6 +752,11 @@ export const useTaskStore = defineStore('task', () => {
 
   function toggleHideCompleted() {
     hideCompleted.value = !hideCompleted.value
+    try {
+      localStorage.setItem(HIDE_COMPLETED_KEY, String(hideCompleted.value))
+    } catch {
+      // ignore storage errors
+    }
     void fetchTodosForCurrentFilter()
   }
 

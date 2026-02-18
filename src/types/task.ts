@@ -3,6 +3,7 @@ export interface Task {
   title: string
   completed: boolean
   date?: Date | null
+  dueAt?: Date | null
   checklist: string
   priority?: 'p1' | 'p2' | 'p3' | 'p4'
   tags?: string[]

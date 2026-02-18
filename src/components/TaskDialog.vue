@@ -20,6 +20,16 @@
             style="width: 100%"
           />
         </el-form-item>
+        <el-form-item label="时间">
+          <el-time-picker
+            v-model="form.time"
+            placeholder="选择时间"
+            format="HH:mm"
+            value-format="HH:mm"
+            :disabled="!form.date"
+            style="width: 100%"
+          />
+        </el-form-item>
         <el-form-item label="重要性">
           <el-switch
             v-model="form.important"
@@ -198,6 +208,7 @@ const visible = ref(false)
 const form = ref({
   title: '',
   date: null as string | null,
+  time: null as string | null,
   important: false,
   urgent: false,
   checklist: '收集箱',
@@ -241,6 +252,14 @@ function toLocalDateTime(value: string) {
   if (Number.isNaN(date.getTime())) return value
   const pad = (num: number) => String(num).padStart(2, '0')
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
+}
+
+function formatTime(value?: Date | string | null) {
+  if (!value) return null
+  const date = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(date.getTime())) return null
+  const pad = (num: number) => String(num).padStart(2, '0')
+  return `${pad(date.getHours())}:${pad(date.getMinutes())}`
 }
 
 async function loadExtras(taskId: number) {
@@ -299,6 +318,7 @@ watch(() => props.modelValue, (val) => {
     form.value = {
       title: props.task.title,
       date: props.task.date ? new Date(props.task.date).toISOString().split('T')[0] : null,
+      time: formatTime(props.task.dueAt),
       important: props.task.important ?? false,
       urgent: props.task.urgent ?? false,
       checklist: props.task.checklist,
@@ -335,6 +355,7 @@ watch(() => props.modelValue, (val) => {
     form.value = {
       title: '',
       date: null,
+      time: null,
       important: false,
       urgent: false,
       checklist: '收集箱',
@@ -367,6 +388,12 @@ watch(() => props.modelValue, (val) => {
   }
 })
 
+watch(() => form.value.date, (date) => {
+  if (!date && form.value.time) {
+    form.value.time = null
+  }
+})
+
 watch(visible, (val) => {
   emit('update:modelValue', val)
 })
@@ -377,9 +404,15 @@ function handleClose() {
 
 function handleSave() {
   const tags = parseTags(form.value.tags || '')
+  const dateOnly = form.value.date ? new Date(`${form.value.date}T00:00:00`) : null
+  const dueAt = form.value.date && form.value.time
+    ? new Date(`${form.value.date}T${form.value.time}:00`)
+    : null
+  const { time, ...rest } = form.value
   emit('save', {
-    ...form.value,
-    date: form.value.date ? new Date(form.value.date) : null,
+    ...rest,
+    date: dateOnly,
+    dueAt,
     tags: tags.length ? tags : undefined,
     estimatedMinutes: form.value.estimatedMinutes ?? null,
     effortLevel: form.value.effortLevel || undefined,
